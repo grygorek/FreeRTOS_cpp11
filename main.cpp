@@ -57,7 +57,8 @@ int main(void)
     JoinBeforeThreadEnd();
     DestroyBeforeThreadEnd();
     DestroyNoStart();
-    StartAndMove();
+    StartAndMoveOperator();
+    StartAndMoveConstructor();
 
     TestCV();
     TestCVAny();

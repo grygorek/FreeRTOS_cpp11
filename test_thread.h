@@ -91,7 +91,7 @@ inline void DestroyNoStart()
   std::thread t;
 }
 
-inline void StartAndMove()
+inline void StartAndMoveOperator()
 {
   using namespace std::chrono_literals;
   std::thread tt;
@@ -103,6 +103,20 @@ inline void StartAndMove()
     tt = std::move(t);
   }
 
+  tt.join();
+}
+
+inline void StartAndMoveConstructor()
+{
+  using namespace std::chrono_literals;
+
+  std::thread t{[] {
+    std::this_thread::sleep_for(1s);
+  }};
+
+  std::thread tt{std::move(t)};
+
+  //t.join(); this will terminate the program
   tt.join();
 }
 
