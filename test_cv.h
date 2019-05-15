@@ -31,41 +31,86 @@
 /// POSSIBILITY OF SUCH DAMAGE.
 ///
 
+#ifndef __CV_TEST_H__
+#define __CV_TEST_H__
+
 #include <thread>
 #include <chrono>
 #include <mutex>
 #include <condition_variable>
+#include <queue>
 
-#include "FreeRTOS_time.h"
-
-#include "test_thread.h"
-#include "test_cv.h"
-
-int main(void)
+inline void TestCV()
 {
-  using namespace std::chrono_literals;
-  using namespace std::chrono;
-  SetSystemClockTime(time_point<system_clock>(1550178897s));
+  std::queue<int> q;
+  std::mutex m;
+  std::condition_variable cv;
 
-  while (1)
+  std::this_thread::sleep_for(std::chrono::seconds(1));
+
+  std::thread processor{[&]() {
+    std::unique_lock<std::mutex> lock{m};
+
+    while (1)
+    {
+      cv.wait(lock, [&q] { return q.size() > 0; });
+      int i = q.front();
+      q.pop();
+      lock.unlock();
+
+      if (i == 0)
+        return;
+
+      lock.lock();
+    }
+  }};
+
+  for (int i = 100; i >= 0; i--)
   {
-    std::this_thread::sleep_until(system_clock::now() + 2s);
-
-    DetachAfterThreadEnd();
-    DetachBeforeThreadEnd();
-    JoinAfterThreadEnd();
-    JoinBeforeThreadEnd();
-    DestroyBeforeThreadEnd();
-    DestroyNoStart();
-    StartAndMove();
-
-    TestCV();
-    TestCVAny();
+    m.lock();
+    q.push(i);
+    m.unlock();
+    cv.notify_one();
   }
+
+  processor.join();
 }
 
-/* System clock frequency. */
-extern "C" uint32_t SystemCoreClockFreq()
+inline void TestCVAny()
 {
-  return 20'000'000;
+  std::queue<int> q;
+  std::mutex m;
+  std::condition_variable_any cv;
+
+  std::this_thread::sleep_for(std::chrono::seconds(1));
+
+  std::thread processor{[&]() {
+    m.lock();
+
+    while (1)
+    {
+      cv.wait(m, [&q] { return q.size() > 0; });
+
+      int i = q.front();
+      q.pop();
+      m.unlock();
+
+      if (i == 0)
+        return;
+
+      m.lock();
+    }
+  }};
+
+  for (int i = 100; i >= 0; i--)
+  {
+    m.lock();
+    q.push(i);
+    m.unlock();
+    cv.notify_one();
+  }
+
+  processor.join();
 }
+
+#endif //__CV_TEST_H__

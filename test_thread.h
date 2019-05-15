@@ -31,41 +31,79 @@
 /// POSSIBILITY OF SUCH DAMAGE.
 ///
 
+#ifndef __THREAD_TEST_H__
+#define __THREAD_TEST_H__
+
 #include <thread>
 #include <chrono>
-#include <mutex>
-#include <condition_variable>
 
-#include "FreeRTOS_time.h"
-
-#include "test_thread.h"
-#include "test_cv.h"
-
-int main(void)
+inline void DetachBeforeThreadEnd()
 {
   using namespace std::chrono_literals;
-  using namespace std::chrono;
-  SetSystemClockTime(time_point<system_clock>(1550178897s));
+  std::thread t{[] {
+    std::this_thread::sleep_for(1s);
+  }};
 
-  while (1)
-  {
-    std::this_thread::sleep_until(system_clock::now() + 2s);
-
-    DetachAfterThreadEnd();
-    DetachBeforeThreadEnd();
-    JoinAfterThreadEnd();
-    JoinBeforeThreadEnd();
-    DestroyBeforeThreadEnd();
-    DestroyNoStart();
-    StartAndMove();
-
-    TestCV();
-    TestCVAny();
-  }
+  t.detach();
 }
 
-/* System clock frequency. */
-extern "C" uint32_t SystemCoreClockFreq()
+inline void DetachAfterThreadEnd()
 {
-  return 20'000'000;
+  using namespace std::chrono_literals;
+  std::thread t{[] {
+  }};
+
+  std::this_thread::sleep_for(1s);
+  t.detach();
 }
+
+inline void JoinBeforeThreadEnd()
+{
+  using namespace std::chrono_literals;
+  std::thread t{[] {
+    std::this_thread::sleep_for(1s);
+  }};
+
+  t.join();
+}
+
+inline void JoinAfterThreadEnd()
+{
+  using namespace std::chrono_literals;
+  std::thread t{[] {
+  }};
+
+  std::this_thread::sleep_for(1s);
+  t.join();
+}
+
+inline void DestroyBeforeThreadEnd()
+{
+  //using namespace std::chrono_literals;
+  // will call std::terminate if enabled
+  //	std::thread t{[]{
+  //			std::this_thread::sleep_for(1s);
+  //	}};
+}
+
+inline void DestroyNoStart()
+{
+  std::thread t;
+}
+
+inline void StartAndMove()
+{
+  using namespace std::chrono_literals;
+  std::thread tt;
+
+  {
+    std::thread t{[] {
+      std::this_thread::sleep_for(1s);
+    }};
+    tt = std::move(t);
+  }
+
+  tt.join();
+}
+
+#endif //__THREAD_TEST_H__
