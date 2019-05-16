@@ -101,6 +101,22 @@ public:
     _fOwner = false; // it is just a copy
   }
 
+  gthr_freertos(gthr_freertos &&r)
+  {
+    taskENTER_CRITICAL();
+    if (r._fOwner)
+    {
+      taskEXIT_CRITICAL();
+      // make sure it has already started
+      // - native thread function must make local copies first
+      r.wait_for_start();
+      taskENTER_CRITICAL();
+    }
+    // 'this' becomes the owner if r is the owner
+    move(std::forward<gthr_freertos>(r));
+    taskEXIT_CRITICAL();
+  }
+
   bool create_thread(task_foo foo, void *arg)
   {
     _arg = arg;
@@ -231,6 +247,7 @@ public:
   void *arg() const { return _arg; }
 
   ~gthr_freertos() = default;
+  gthr_freertos &operator=(const gthr_freertos &r) = delete;
 
 private:
   gthr_freertos() = default;
@@ -239,9 +256,6 @@ private:
       : _taskHandle{thnd}, _evHandle{ehnd}
   {
   }
-
-  gthr_freertos(gthr_freertos &&r) = delete;
-  gthr_freertos &operator=(const gthr_freertos &r) = delete;
 
   gthr_freertos &operator=(gthr_freertos &&r)
   {
