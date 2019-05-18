@@ -40,13 +40,52 @@
 #include <condition_variable>
 #include <queue>
 
-inline void TestCV()
+
+inline void TestCVTimeout()
 {
   std::queue<int> q;
   std::mutex m;
   std::condition_variable cv;
 
-  std::this_thread::sleep_for(std::chrono::seconds(1));
+  std::thread processor{[&]() {
+    std::unique_lock<std::mutex> lock{m};
+
+    while (1)
+    {
+      while( false == cv.wait_for(lock, std::chrono::milliseconds(1),
+                                    [&q] { return q.size() > 0; }) )
+        ;
+
+      int i = q.front();
+      q.pop();
+      lock.unlock();
+
+      if (i == 0)
+        return;
+
+      lock.lock();
+    }
+  }};
+
+  for (int i = 100; i >= 0; i--)
+  {
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+    m.lock();
+    q.push(i);
+    m.unlock();
+    cv.notify_one();
+  }
+
+  processor.join();
+}
+
+
+inline void TestCV()
+{
+  std::queue<int> q;
+  std::mutex m;
+  std::condition_variable cv;
 
   std::thread processor{[&]() {
     std::unique_lock<std::mutex> lock{m};
@@ -81,8 +120,6 @@ inline void TestCVAny()
   std::queue<int> q;
   std::mutex m;
   std::condition_variable_any cv;
-
-  std::this_thread::sleep_for(std::chrono::seconds(1));
 
   std::thread processor{[&]() {
     m.lock();
