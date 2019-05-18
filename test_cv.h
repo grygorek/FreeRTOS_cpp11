@@ -178,4 +178,34 @@ inline void TestCVAny()
   processor.join();
 }
 
+inline void TestNotifyAllAtThrdExit()
+{
+  std::condition_variable cv;
+  std::mutex mtx;
+  std::int32_t result{};
+  bool fReady{false};
+
+  std::thread{
+      [&] {
+        std::unique_lock<std::mutex> lg{mtx};
+        result = 666;
+        fReady = true;
+        std::notify_all_at_thread_exit(cv, std::move(lg));
+      }}
+      .detach();
+
+  std::unique_lock<std::mutex> lg{mtx};
+  cv.wait(lg, [&fReady] { return fReady; });
+
+  assert(666 == result);
+}
+
+inline void TestConditionVariable()
+{
+  TestCV();
+  TestCVAny();
+  TestCVTimeout();
+  TestNotifyAllAtThrdExit();
+}
+
 #endif //__CV_TEST_H__

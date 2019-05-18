@@ -36,6 +36,13 @@
 #include <cerrno>
 #include "FreeRTOS.h"
 
+#include "gthr_key_type.h"
+
+namespace free_rtos_std
+{
+extern Key *s_key;
+} // namespace free_rtos_std
+
 namespace std
 {
 
@@ -48,6 +55,9 @@ static void __execute_native_thread_routine(void *__p)
     local.notify_started(); // copy has been made; tell we are running
     __t->_M_run();
   }
+
+  if (free_rtos_std::s_key)
+    free_rtos_std::s_key->CallDestructor(__gthread_t::self().native_task_handle());
 
   local.notify_joined(); // finished; release joined threads
 }
