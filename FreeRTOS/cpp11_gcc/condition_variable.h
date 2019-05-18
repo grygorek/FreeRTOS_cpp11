@@ -39,7 +39,7 @@
 #include "semphr.h"
 #include "thread_gthread.h"
 
-#include <queue>
+#include <list>
 #include <algorithm>
 
 namespace free_rtos_std
@@ -80,12 +80,13 @@ class cv_task_list
 public:
   using __gthread_t = free_rtos_std::gthr_freertos;
   using thrd_type = __gthread_t::native_task_type;
-  using queue_type = std::queue<thrd_type>;
+  using queue_type = std::list<thrd_type>;
 
   cv_task_list() = default;
 
-  void push(thrd_type thrd) { _que.push(thrd); }
-  void pop() { _que.pop(); }
+  void remove(thrd_type thrd) { _que.remove(thrd); }
+  void push(thrd_type thrd) { _que.push_back(thrd); }
+  void pop() { _que.pop_front(); }
   bool empty() const { return _que.empty(); }
 
   ~cv_task_list()

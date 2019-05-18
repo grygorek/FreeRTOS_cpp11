@@ -62,6 +62,7 @@ int main(void)
 
     TestCV();
     TestCVAny();
+    TestCVTimeout();
   }
 }
 

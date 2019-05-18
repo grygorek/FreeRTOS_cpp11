@@ -151,8 +151,8 @@ extern "C"
   static inline __gthread_time_t operator-(
       const __gthread_time_t &lhs, const timeval &rhs)
   {
-    long s = lhs.sec - rhs.tv_sec;
-    long ns = lhs.nsec - rhs.tv_usec * 1000;
+    long s {lhs.sec - rhs.tv_sec};
+    long ns {lhs.nsec - rhs.tv_usec * 1000};
     if (ns < 0)
     {
       s--;
@@ -165,7 +165,7 @@ extern "C"
   static inline int __gthread_mutex_timedlock(
       __gthread_mutex_t *m, const __gthread_time_t *abs_timeout)
   {
-    timeval now;
+    timeval now{};
     gettimeofday(&now, NULL);
 
     auto t = (*abs_timeout - now).milliseconds();
@@ -175,7 +175,7 @@ extern "C"
   static inline int __gthread_recursive_mutex_timedlock(
       __gthread_recursive_mutex_t *m, const __gthread_time_t *abs_time)
   {
-    timeval now;
+    timeval now{};
     gettimeofday(&now, NULL);
 
     auto t = (*abs_time - now).milliseconds();
@@ -224,20 +224,26 @@ extern "C"
       __gthread_cond_t *cond, __gthread_mutex_t *mutex,
       const __gthread_time_t *abs_timeout)
   {
+    auto this_thrd_hndl {__gthread_t::native_task_handle()};
     cond->lock();
-    cond->push(__gthread_t::native_task_handle());
+    cond->push(this_thrd_hndl);
     cond->unlock();
 
-    timeval now;
+    timeval now{};
     gettimeofday(&now, NULL);
 
-    int64_t ms = (*abs_timeout - now).milliseconds();
+    auto ms {(*abs_timeout - now).milliseconds()};
 
     __gthread_mutex_unlock(mutex);
 
-    int result = 0;
+    int result {0};
     if (0 == ulTaskNotifyTake(pdFALSE, pdMS_TO_TICKS(ms)))
+    { // timeout - remove the thread from the waiting list
+      cond->lock();
+      cond->remove(this_thrd_hndl);
+      cond->unlock();
       result = 138; // posix ETIMEDOUT
+    }
 
     __gthread_mutex_lock(mutex);
 
