@@ -39,37 +39,61 @@
 #include <mutex>
 #include <condition_variable>
 #include <queue>
+#include <array>
 
+#include <cassert>
 
 inline void TestCVTimeout()
 {
+  // Idea of this test is to force condition variable to timeout.
+  //
+  // It is achieved by having shorter wait timeout than new data is added
+  // to the processing queue. There is number of processing threads
+  // concuring for data. They have different timeouts to shuffle order
+  // of condition variable waiting threads queue.
+
   std::queue<int> q;
   std::mutex m;
   std::condition_variable cv;
+  bool fCancel{false};
 
-  std::thread processor{[&]() {
+  { // test generic timeout
+    std::unique_lock<std::mutex> lock{m};
+    assert(false == cv.wait_for(lock, std::chrono::milliseconds(10), [&q, &fCancel] { return q.size() > 0 || fCancel; }));
+  }
+
+  auto processFoo{[&](std::int32_t idx) {
     std::unique_lock<std::mutex> lock{m};
 
     while (1)
     {
-      while( false == cv.wait_for(lock, std::chrono::milliseconds(1),
-                                    [&q] { return q.size() > 0; }) )
+      while (false == cv.wait_for(lock, std::chrono::milliseconds(idx * 2),
+                                  [&q, &fCancel] { return q.size() > 0 || fCancel; }))
         ;
 
-      int i = q.front();
-      q.pop();
-      lock.unlock();
-
-      if (i == 0)
+      if (q.size())
+      {
+        q.pop();
+        lock.unlock();
+      }
+      else
+      {
+        lock.unlock();
         return;
+      }
 
       lock.lock();
     }
   }};
 
-  for (int i = 100; i >= 0; i--)
+  std::array<std::thread, 6> processors;
+  std::int32_t size{processors.size()};
+  for (auto &processor : processors)
+    processor = std::thread{processFoo, size--};
+
+  for (auto i{20}; i >= 0; i--)
   {
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
 
     m.lock();
     q.push(i);
@@ -77,9 +101,13 @@ inline void TestCVTimeout()
     cv.notify_one();
   }
 
-  processor.join();
-}
+  fCancel = true;
 
+  for (auto &processor : processors)
+    processor.join();
+
+  assert(q.size() == 0);
+}
 
 inline void TestCV()
 {

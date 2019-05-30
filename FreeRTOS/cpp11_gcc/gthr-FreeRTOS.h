@@ -230,17 +230,17 @@ extern "C"
     auto ms{(*abs_timeout - now).milliseconds()};
 
     __gthread_mutex_unlock(mutex);
+    auto fTimeout{0 == ulTaskNotifyTake(pdFALSE, pdMS_TO_TICKS(ms))};
+    __gthread_mutex_lock(mutex);
 
     int result{0};
-    if (0 == ulTaskNotifyTake(pdFALSE, pdMS_TO_TICKS(ms)))
+    if (fTimeout)
     { // timeout - remove the thread from the waiting list
       cond->lock();
       cond->remove(this_thrd_hndl);
       cond->unlock();
       result = 138; // posix ETIMEDOUT
     }
-
-    __gthread_mutex_lock(mutex);
 
     return result;
   }
