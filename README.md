@@ -8,12 +8,11 @@ in FreeRTOS. That is:
   * Creating threads - std::thread, 
   * Locking - std::mutex, std::condition_variable, etc.
   * Time - std::chrono, std::sleep_for, etc.
+  * Futures - std::assync, std::promise, std::future, etc.
+  * std::notify_all_at_thread_exit
 
-Missing parts are related to 'futures': 
-  * std::assync
-  * std::launch
-  * std::promise
-  * etc.
+I have not tested all the features. I know that `thread_local` does not work.
+It will compile but will not create thread unique storage.
 
 This implementation is for GNU C Compiler (GCC) only. Tested with:
   * GCC 7.2 and 8.2 for ARM 32bit (cmake generates Eclipse project)
@@ -102,6 +101,11 @@ The following definitions should also be placed in `FreeRTOSConfig.h` file:
 #define pdMS_TO_TICKS( xTimeInMs ) \
      ( ( TickType_t ) ( ( ( TickType_t ) ( xTimeInMs ) * \
      ( TickType_t ) configTICK_RATE_HZ ) / ( TickType_t ) 1000 ) )
+
+#ifndef pdTICKS_TO_MS
+#define pdTICKS_TO_MS(ticks) \
+  ((((long long)(ticks)) * (configTICK_RATE_HZ)) / 1000)
+#endif
 ```
 
 And then the following files need to be included in the project:
@@ -113,9 +117,15 @@ critical_section.h      --> Helper class wrap FreeRTOS citical section
                             (it is for the internal use only)
 freertos_time.cpp       --> Setting and reading system wall/clock time
 freertos_time.h         --> Declaration
-gthr-FreeRTOS.h         --> GCC Hook (thread and mutex)
 thread_gthread.h        --> Helper class to integrate FreeRTOS with std::thread
 thread.cpp              --> Definitions required by std::thread class
+gthr_key.cpp            --> Definition required by futures
+gthr_key.h              --> Declarations
+gthr_key_type.h         --> Helper class for local thread storage
+gthr-FreeRTOS.h         --> GCC Hook (thread and mutex)
+
+future.cc               --> Taken as is from GCC code
+mutex.cc                --> Taken as is from GCC code
 ```
 
 Simple example application can be like that:
@@ -429,8 +439,8 @@ condition_variable::~condition_variable()
 }
 ```
 
-The `wait` function is the one which keeps the secret of a condition
-variable (snippet below). It saves a handle of the current thread to the queue while the
+The `wait` function is the one which keeps the secret of a condition variable 
+(snippet below). It saves a handle of the current thread to the queue while the
 both mutexes are taken! The first one is taken outside the `wait` call and
 is protecting the condition (have a look at implementation of 
 `condition_variable::wait` with a predicate). This is important - this is a 
@@ -475,7 +485,7 @@ void condition_variable::wait(std::unique_lock<std::mutex> &m)
   _M_cond.unlock();
 
   m.unlock();
-  ulTaskNotifyTake(pdFALSE, portMAX_DELAY);
+  ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
   m.lock();
 }
 
@@ -700,7 +710,7 @@ that way and I run into a race condition - who gets first - the thread function
 destroys the handle or join gets the handle. Because join must block on that 
 handle then synchronisation becomes a challange. I think simpler solution exists.
 
-The solution is that the two handles have different living time. The ugly part 
+The solution is that the two handles have different life time. The ugly part 
 is that, two handles must be kept in the same generic handle. The rtos task 
 handle is released at the end of the thread function. The events handle
 is released at the end of join/detach call. Here:
@@ -724,6 +734,9 @@ namespace std{
       __t->_M_run();
     }
 
+    if (free_rtos_std::s_key)
+      free_rtos_std::s_key->CallDestructor(__gthread_t::self().native_task_handle());
+
     local.notify_joined(); // finished; release joined threads
   }
 
@@ -735,7 +748,7 @@ time a copy is made. Also, the state is put back into the unique_pointer `__t`.
 Now, it is time to notify that the thread has started execution and then
 call the user's task. When the user's task function returns, the state
 will be deleted (by the scope) and that means the thread has finished its
-function. Notify the joined thread and that is it.
+function. Delete thread local data and notify the joined thread. That is it.
 
 ## Native Handle Implementation
 
@@ -767,6 +780,7 @@ public:
   typedef TaskHandle_t native_task_type;
 
   gthr_freertos(const gthr_freertos &r);
+  gthr_freertos(gthr_freertos &&r);
   ~gthr_freertos() = default;
 
   bool create_thread(task_foo foo, void *arg);
@@ -785,12 +799,11 @@ public:
   bool operator<(const gthr_freertos &r) const;
 
   void *arg();
+  gthr_freertos &operator=(const gthr_freertos &r) = delete;
 
 private:
   gthr_freertos() = default;
   gthr_freertos(native_task_type thnd, EventGroupHandle_t ehnd);
-  gthr_freertos(gthr_freertos &&r) = delete;
-  gthr_freertos &operator=(const gthr_freertos &r) = delete;
 
   gthr_freertos &operator=(gthr_freertos &&r);
 
@@ -830,17 +843,20 @@ Class is defined in `critical_section.h` file.
 
 ### Creating Thread
 
-Creating the FreeRTOS task requires allocating two handles. They are not created 
-in a constructor but in create_thread function. Program will
+Creating the FreeRTOS task requires allocating two handles. They are not 
+created in a constructor but in create_thread function. Program will
 terminate if there is no resources. Alternatively, the function
-could return false instead. By default only 256 words will be allocated
-for the stack. This would be 1kB on ARM. Standard C++ interface does not let
-define the stack size. So, if application requires more then this code has to
-be modified. Note, that the change will apply to all threads. Critical
-section disables interrupts. As described earlier, the native thread function
-will delete thread's handle when finished. So here, critical section makes sure
-the thread does not start before the event's handle is stored in the thread's
-local storage.
+could return false instead. By default 512 words will be allocated
+for the stack. This would be 2kB on ARM. Standard C++ interface does not let
+define the stack size. So, this code has to be modified if application 
+requires more. Note, that the change will apply to all threads. The 2kB is 
+required when futures are used. Without futures, I had the system running 
+with 1kB only. 
+
+Critical section disables interrupts. As described earlier,
+the native thread function will delete thread's handle when finished.
+So here, critical section makes sure the thread does not start before 
+the event's handle is stored in the thread's local storage.
 
 ```
 bool gthr_freertos::create_thread(task_foo foo, void *arg)
@@ -854,7 +870,7 @@ bool gthr_freertos::create_thread(task_foo foo, void *arg)
   {
     critical_section critical;
 
-    xTaskCreate(foo, "Task", 256, this, tskIDLE_PRIORITY + 1, &_taskHandle);
+    xTaskCreate(foo, "Task", 512, this, tskIDLE_PRIORITY + 1, &_taskHandle);
     if (!_taskHandle)
       std::terminate();
 
@@ -1010,6 +1026,202 @@ gthr_freertos &gthr_freertos::operator=(gthr_freertos &&r)
 }
 ```
 
+## Futures
+
+I have to admit I have cheated to provide support for futures. Simply, 
+I just included files from GCC repository. That is `mutex.cc` and `future.cc`. 
+Plus I copied a piece of code at the end of `condition_variable.cpp` from
+`condition_variable.cc` file. 
+The reason for adding it at the end of file is that `future.cc` is explicitly 
+referencing `condition_variable.cc`:
+
+```
+inside of future.cc:
+
+  // defined in src/c++11/condition_variable.cc
+  extern void
+  __at_thread_exit(__at_thread_exit_elt* elt);
+```
+
+Although, the extentions are diffrent (`cc` vs `cpp`) I did not want to create
+a separate file, modify the comment or rename the existing file. I think this is
+a good compromise.
+
+Copying files is not enough. Few extra functions must be implemented to make 
+futures working.
+
+### Once
+
+Function `std::call_once` calls low level `__gthread_once`. Implementation
+is in `gthr-FreeRTOS.h`. An external flag must be set to 
+`true` when the function is called. Access to the flag is synchronised with 
+a mutex. Function is not called when the flag has already been set. 
+
+```
+static int __gthread_once(__gthread_once_t *once, void (*func)(void))
+{
+  static __gthread_mutex_t s_m = xSemaphoreCreateMutex();
+  if (!s_m)
+    return 12; //POSIX error: ENOMEM
+
+  __gthread_once_t flag{true};
+  xSemaphoreTakeRecursive(s_m, portMAX_DELAY);
+  std::swap(*once, flag);
+  xSemaphoreGiveRecursive(s_m);
+
+  if (flag == false)
+    func();
+
+  return 0;
+}
+```
+
+
+### At Thread Exit
+
+I found two functions in STL that require execution of user code AFTER
+a thread has finished its execution. These are `std::notify_all_at_thread_exit`
+and family of functions `std::promise::set_value_at_thread_exit`. 
+I am not sure if there is more.
+
+Again, GCC implementation is accesing functions in `ghtr-FreeRTOS.h`.
+The calls are redirected to my implementation:
+
+```
+typedef free_rtos_std::Key *__gthread_key_t;
+
+static int __gthread_key_create(__gthread_key_t *keyp, void (*dtor)(void *))
+{  return free_rtos_std::freertos_gthread_key_create(keyp, dtor);}
+
+static int __gthread_key_delete(__gthread_key_t key)
+{  return free_rtos_std::freertos_gthread_key_delete(key);}
+
+static void *__gthread_getspecific(__gthread_key_t key)
+{  return free_rtos_std::freertos_gthread_getspecific(key);}
+
+static int __gthread_setspecific(__gthread_key_t key, const void *ptr)
+{  return free_rtos_std::freertos_gthread_setspecific(key, ptr);}
+```
+
+Those functions provide a way of storing thread specific data.
+
+To be honest I am not sure if my implementation does what is required.
+I read POSIX description of those functions many times and I find it
+ambigous. 
+
+My understanding is that key_create is called once in a thread function
+and it creates a single key. Then each thread running that function
+can store and load their specific data to that key. So, the key is a
+container of threads' data associated with the thread handler. 
+In my code it is implemented as an unordered map.
+
+Also, please notice the second argument of `_key_create`.
+Accordingly to POSIX description, this is a destructor function that will be 
+called when a thread has exited and the associated data is not null. 
+
+That key is defined in `gthr_key_type.h`. There is a map to store the data,
+pointer to a destructor function and a mutex to synchronise the map.
+
+```
+struct Key
+{
+  using __gthread_t = free_rtos_std::gthr_freertos;
+  typedef void (*DestructorFoo)(void *);
+
+  Key() = delete;
+  explicit Key(DestructorFoo des) : _desFoo{des} {}
+
+  void CallDestructor(__gthread_t::native_task_type task);
+
+  std::mutex _mtx;
+  DestructorFoo _desFoo;
+  std::unordered_map<__gthread_t::native_task_type, const void *> _specValue;
+};
+```
+
+Then key creation is like:
+
+```
+namespace free_rtos_std
+{
+Key *s_key;
+
+int freertos_gthread_key_create(Key **keyp, void (*dtor)(void *))
+{
+  // There is only one key for all threads. If more keys are needed
+  // a list must be implemented.
+  assert(!s_key);
+  s_key = new Key(dtor);
+
+  *keyp = s_key;
+  return 0;
+}
+}
+```
+
+Storing and loading a value is just simple map manipulation. Functions
+are implemented in `gthr_key.cpp`.
+
+Last missing thing is how to hook it to thread destruction. 
+The Key structure had a special function `CallDestructor`. Function
+finds an associated thread specific data. If found, removes it
+from the storage and the previously registered destructor is called.
+
+```
+void CallDestructor(__gthread_t::native_task_type task)
+{
+  void *val;
+
+  {
+    std::lock_guard lg{_mtx};
+
+    auto item{_specValue.find(task)};
+    if (item == _specValue.end())
+      return;
+
+    val = const_cast<void *>(item->second);
+    _specValue.erase(item);
+  }
+
+  if (_desFoo && val)
+    _desFoo(val);
+}
+```
+
+This function is called from `std::__execute_native_thread_routine` in
+`thread.cpp`, right after the user thread function has returned:
+
+```
+namespace free_rtos_std
+{
+extern Key *s_key;
+}
+
+static void __execute_native_thread_routine(void *__p)
+{
+  ...
+  // at this stage __t->_M_run() has finished execution
+
+  if (free_rtos_std::s_key)
+    free_rtos_std::s_key->CallDestructor(__gthread_t::self().native_task_handle());
+  ...
+}
+```
+
+That is it. From now on std::promise, std::future, etc. will work.
+
+### thread_local
+
+I could not make it work. Sad.
+
+GCC for free standing systems (bare metal, no OS) is compiled with 
+`__gthread_active_p` function returning 0. My implementation returns 1 however,
+GCC sees 0. Most likely function got inlined during GCC build time. 
+Zero indicates that a thread system is not active. In that case a single 
+instance of a variable is created, insted of one per thread. 
+
+Please let me know if there are other features that do not work.
+
 ## System Time
 
 Last bit of c++ threading is `sleep_for` and `sleep_until` functions.
@@ -1085,10 +1297,10 @@ using namespace std::chrono;
 void SetSystemClockTime(
     const time_point<system_clock, system_clock::duration> &time)
 {
-  auto delta = time - time_point<system_clock>(
-                          milliseconds(pdTICKS_TO_MS(xTaskGetTickCount())));
-  long long sec = duration_cast<seconds>(delta).count();
-  long usec = duration_cast<microseconds>(delta).count() - sec * 1'000'000;
+  auto delta{time - time_point<system_clock>(
+                        milliseconds(pdTICKS_TO_MS(xTaskGetTickCount())))};
+  long long sec{duration_cast<seconds>(delta).count()};
+  long usec = duration_cast<microseconds>(delta).count() - sec * 1'000'000; //narrowing type
 
   free_rtos_std::wall_clock::time({sec, usec});
 }
@@ -1104,10 +1316,12 @@ extern "C" int _gettimeofday(timeval *tv, void *tzvp)
 {
   (void)tzvp;
 
-  auto t = free_rtos_std::wall_clock::time();
+  auto t{free_rtos_std::wall_clock::time()};
 
-  long long sec = pdTICKS_TO_MS(t.ticks) / 1000;
-  long usec = pdTICKS_TO_MS(t.ticks - (sec * configTICK_RATE_HZ)) * 1000;
+  long long ms{pdTICKS_TO_MS(t.ticks)};
+  long long sec{ms / 1000};
+  long usec = (ms - sec * 1000) * 1000; //narrowing type
+
   *tv = t.offset + timeval{sec, usec};
 
   return 0; // return non-zero for error
@@ -1128,11 +1342,12 @@ I believe that the main advantage of this library is the same generic
 C++ interface. I find it handy to implement and debug certain algorithms in 
 Visual Studio and then port it to a target board painlesly. 
 
+The `thread_local` issue is dissapointing. The only idea I have in my mind
+would be to fork GCC and recompile it with `__gthread_active_p` returning 1.
+Would it work? Would not it break the compiler? I do not know. Give me a shout
+if you try.
+
 My target was to make C++ multithreading available over FreeRTOS API. So, I did
 not bother to make POSIX C interface working. For that reason I believe 
 code in `gthr-FreeRTOS.h` would not compile in plain C project (have not even
 tried it).
-
-I have not tried to implement any of the `futures` of the multithreading
-interface. Although, by looking how the thread or conditional variable interface
-is designed, I do not expect much surprises in `futures` either.
