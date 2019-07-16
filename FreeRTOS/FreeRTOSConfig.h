@@ -198,7 +198,7 @@ standard names. */
 
 #ifndef pdTICKS_TO_MS
 #define pdTICKS_TO_MS(ticks) \
-  (((ticks) * (configTICK_RATE_HZ)) / 1000)
+  ((((long long)(ticks)) * (configTICK_RATE_HZ)) / 1000)
 #endif
 
 #endif /* FREERTOS_CONFIG_H */

@@ -151,13 +151,8 @@ extern "C"
   static inline __gthread_time_t operator-(
       const __gthread_time_t &lhs, const timeval &rhs)
   {
-    long s {lhs.sec - rhs.tv_sec};
-    long ns {lhs.nsec - rhs.tv_usec * 1000};
-    if (ns < 0)
-    {
-      s--;
-      ns += 1'000'000;
-    }
+    int32_t s{lhs.sec - rhs.tv_sec};
+    int32_t ns{lhs.nsec - rhs.tv_usec * 1000};
 
     return __gthread_time_t{s, ns};
   }
@@ -224,7 +219,7 @@ extern "C"
       __gthread_cond_t *cond, __gthread_mutex_t *mutex,
       const __gthread_time_t *abs_timeout)
   {
-    auto this_thrd_hndl {__gthread_t::native_task_handle()};
+    auto this_thrd_hndl{__gthread_t::native_task_handle()};
     cond->lock();
     cond->push(this_thrd_hndl);
     cond->unlock();
@@ -232,11 +227,11 @@ extern "C"
     timeval now{};
     gettimeofday(&now, NULL);
 
-    auto ms {(*abs_timeout - now).milliseconds()};
+    auto ms{(*abs_timeout - now).milliseconds()};
 
     __gthread_mutex_unlock(mutex);
 
-    int result {0};
+    int result{0};
     if (0 == ulTaskNotifyTake(pdFALSE, pdMS_TO_TICKS(ms)))
     { // timeout - remove the thread from the waiting list
       cond->lock();
