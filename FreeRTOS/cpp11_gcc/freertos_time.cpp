@@ -73,10 +73,10 @@ using namespace std::chrono;
 void SetSystemClockTime(
     const time_point<system_clock, system_clock::duration> &time)
 {
-  auto delta = time - time_point<system_clock>(
-                          milliseconds(pdTICKS_TO_MS(xTaskGetTickCount())));
-  long long sec = duration_cast<seconds>(delta).count();
-  long usec = duration_cast<microseconds>(delta).count() - sec * 1'000'000;
+  auto delta{time - time_point<system_clock>(
+                        milliseconds(pdTICKS_TO_MS(xTaskGetTickCount())))};
+  long long sec{duration_cast<seconds>(delta).count()};
+  long usec = duration_cast<microseconds>(delta).count() - sec * 1'000'000; //narrowing type
 
   free_rtos_std::wall_clock::time({sec, usec});
 }
@@ -97,10 +97,12 @@ extern "C" int _gettimeofday(timeval *tv, void *tzvp)
 {
   (void)tzvp;
 
-  auto t = free_rtos_std::wall_clock::time();
+  auto t{free_rtos_std::wall_clock::time()};
 
-  long long sec = pdTICKS_TO_MS(t.ticks) / 1000;
-  long usec = pdTICKS_TO_MS(t.ticks - (sec * configTICK_RATE_HZ)) * 1000;
+  long long ms{pdTICKS_TO_MS(t.ticks)};
+  long long sec{ms / 1000};
+  long usec = (ms - sec * 1000) * 1000; //narrowing type
+
   *tv = t.offset + timeval{sec, usec};
 
   return 0; // return non-zero for error
