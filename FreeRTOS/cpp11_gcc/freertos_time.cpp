@@ -83,7 +83,7 @@ void SetSystemClockTime(
 
 static timeval operator+(const timeval &l, const timeval &r)
 {
-  timeval t{l.tv_sec + r.tv_sec, l.tv_usec + l.tv_usec};
+  timeval t{l.tv_sec + r.tv_sec, l.tv_usec + r.tv_usec};
 
   if (t.tv_usec >= 1'000'000)
   {
