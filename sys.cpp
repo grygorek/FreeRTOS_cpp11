@@ -87,4 +87,21 @@ extern "C"
   int _getpid() { return 1; }
   int _isatty(int) { return -1; }
   int _lseek(int, int, int) { return 0; }
+
+
+  // FreeRTOS malloc/free declarations
+  void* pvPortMalloc(unsigned long long);
+  void vPortFree(void*);
+
+  // Redirect malloc to FreeRTOS malloc
+  void* __wrap_malloc(unsigned long long size)
+  {
+    return pvPortMalloc(size);
+  }
+
+  // Redirect free to FreeRTOS free
+  void __wrap_free(void *p)
+  {
+    vPortFree(p);
+  }
 }
