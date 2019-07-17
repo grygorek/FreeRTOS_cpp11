@@ -96,8 +96,11 @@ uint32_t SystemCoreClockFreq();
 #define configNUM_THREAD_LOCAL_STORAGE_POINTERS 5
 #define configUSE_APPLICATION_TASK_TAG 0
 
+#define configLIST_VOLATILE volatile
+
 #define configMAIN_STACK_SIZE 256 // in words (bytes = x4)
 #define configDEFAULT_STACK_SIZE configMINIMAL_STACK_SIZE
+#define configRECORD_STACK_HIGH_ADDRESS 1
 
 /* Used memory allocation (heap_x.c) */
 #define configFRTOS_MEMORY_SCHEME 4
@@ -107,7 +110,7 @@ uint32_t SystemCoreClockFreq();
 /* Memory allocation related definitions. */
 #define configSUPPORT_STATIC_ALLOCATION 0
 #define configSUPPORT_DYNAMIC_ALLOCATION 1
-#define configTOTAL_HEAP_SIZE 32 * 1024
+#define configTOTAL_HEAP_SIZE 64 * 1024
 #define configAPPLICATION_ALLOCATED_HEAP 0
 
 /* Hook function related definitions. */

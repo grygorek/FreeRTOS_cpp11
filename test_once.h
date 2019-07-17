@@ -31,93 +31,40 @@
 /// POSSIBILITY OF SUCH DAMAGE.
 ///
 
-#ifndef __THREAD_TEST_H__
-#define __THREAD_TEST_H__
+#ifndef __CALL_ONCE_TEST_H__
+#define __CALL_ONCE_TEST_H__
 
+#include <mutex>
 #include <thread>
-#include <chrono>
+#include <cassert>
 
-inline void DetachBeforeThreadEnd()
+inline void TestCallOnce()
 {
-  using namespace std::chrono_literals;
-  std::thread t{[] {
-    std::this_thread::sleep_for(50ms);
-  }};
+  auto cnt{0};
+  std::once_flag f;
+  std::mutex mtx;
 
-  t.detach();
+  auto once{
+      [&] {
+        std::call_once(f, [&cnt, &mtx] {
+          // If call_once works this guard is not needed.
+          // If it does not work, make sure cnt is incremented atomicaly.
+          std::lock_guard<std::mutex> lg{mtx};
+          cnt++;
+        });
+      }};
+
+  std::thread t0{once};
+  std::thread t1{once};
+  std::thread t2{once};
+  std::thread t3{once};
+
+  t0.join();
+  t1.join();
+  t2.join();
+  t3.join();
+
+  assert(cnt == 1);
 }
 
-inline void DetachAfterThreadEnd()
-{
-  using namespace std::chrono_literals;
-  std::thread t{[] {
-  }};
-
-  std::this_thread::sleep_for(50ms);
-  t.detach();
-}
-
-inline void JoinBeforeThreadEnd()
-{
-  using namespace std::chrono_literals;
-  std::thread t{[] {
-    std::this_thread::sleep_for(50ms);
-  }};
-
-  t.join();
-}
-
-inline void JoinAfterThreadEnd()
-{
-  using namespace std::chrono_literals;
-  std::thread t{[] {
-  }};
-
-  std::this_thread::sleep_for(50ms);
-  t.join();
-}
-
-inline void DestroyBeforeThreadEnd()
-{
-  //using namespace std::chrono_literals;
-  // will call std::terminate if enabled
-  //	std::thread t{[]{
-  //			std::this_thread::sleep_for(50ms);
-  //	}};
-}
-
-inline void DestroyNoStart()
-{
-  std::thread t;
-}
-
-inline void StartAndMoveOperator()
-{
-  using namespace std::chrono_literals;
-  std::thread tt;
-
-  {
-    std::thread t{[] {
-      std::this_thread::sleep_for(50ms);
-    }};
-    tt = std::move(t);
-  }
-
-  tt.join();
-}
-
-inline void StartAndMoveConstructor()
-{
-  using namespace std::chrono_literals;
-
-  std::thread t{[] {
-    std::this_thread::sleep_for(50ms);
-  }};
-
-  std::thread tt{std::move(t)};
-
-  //t.join(); this will terminate the program
-  tt.join();
-}
-
-#endif //__THREAD_TEST_H__
+#endif // __CALL_ONCE_TEST_H__

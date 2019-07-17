@@ -31,93 +31,56 @@
 /// POSSIBILITY OF SUCH DAMAGE.
 ///
 
-#ifndef __THREAD_TEST_H__
-#define __THREAD_TEST_H__
+#include "gthr_key_type.h"
+#include <cassert>
 
-#include <thread>
-#include <chrono>
-
-inline void DetachBeforeThreadEnd()
+namespace free_rtos_std
 {
-  using namespace std::chrono_literals;
-  std::thread t{[] {
-    std::this_thread::sleep_for(50ms);
-  }};
 
-  t.detach();
+Key *s_key;
+
+int freertos_gthread_key_create(Key **keyp, void (*dtor)(void *))
+{
+  // There is only one key for all threads. If more keys are needed
+  // a list must be implemented.
+  assert(!s_key);
+  s_key = new Key(dtor);
+
+  *keyp = s_key;
+  return 0;
 }
 
-inline void DetachAfterThreadEnd()
+int freertos_gthread_key_delete(Key *)
 {
-  using namespace std::chrono_literals;
-  std::thread t{[] {
-  }};
-
-  std::this_thread::sleep_for(50ms);
-  t.detach();
+  // no synchronization here:
+  //   It is up to the applicaiton to delete (or maintain a reference)
+  //   the thread specific data associated with the key.
+  delete s_key;
+  s_key = nullptr;
+  return 0;
 }
 
-inline void JoinBeforeThreadEnd()
+void *freertos_gthread_getspecific(Key *key)
 {
-  using namespace std::chrono_literals;
-  std::thread t{[] {
-    std::this_thread::sleep_for(50ms);
-  }};
+  std::lock_guard<std::mutex> lg{key->_mtx};
 
-  t.join();
+  auto item = key->_specValue.find(__gthread_t::self().native_task_handle());
+  if (item == key->_specValue.end())
+    return nullptr;
+  return const_cast<void *>(item->second);
 }
 
-inline void JoinAfterThreadEnd()
+int freertos_gthread_setspecific(Key *key, const void *ptr)
 {
-  using namespace std::chrono_literals;
-  std::thread t{[] {
-  }};
+  std::lock_guard<std::mutex> lg{key->_mtx};
 
-  std::this_thread::sleep_for(50ms);
-  t.join();
+  auto &cont{key->_specValue};
+  auto task{__gthread_t::self().native_task_handle()};
+  if (ptr)
+    cont[task] = ptr;
+  else
+    (void)cont.erase(task);
+  return 0;
 }
 
-inline void DestroyBeforeThreadEnd()
-{
-  //using namespace std::chrono_literals;
-  // will call std::terminate if enabled
-  //	std::thread t{[]{
-  //			std::this_thread::sleep_for(50ms);
-  //	}};
-}
-
-inline void DestroyNoStart()
-{
-  std::thread t;
-}
-
-inline void StartAndMoveOperator()
-{
-  using namespace std::chrono_literals;
-  std::thread tt;
-
-  {
-    std::thread t{[] {
-      std::this_thread::sleep_for(50ms);
-    }};
-    tt = std::move(t);
-  }
-
-  tt.join();
-}
-
-inline void StartAndMoveConstructor()
-{
-  using namespace std::chrono_literals;
-
-  std::thread t{[] {
-    std::this_thread::sleep_for(50ms);
-  }};
-
-  std::thread tt{std::move(t)};
-
-  //t.join(); this will terminate the program
-  tt.join();
-}
-
-#endif //__THREAD_TEST_H__
+} // namespace free_rtos_std

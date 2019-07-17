@@ -39,6 +39,9 @@
 #include "event_groups.h"
 #include "critical_section.h"
 
+#include <utility>   // std::forward
+#include <exception> // std::terminate
+
 namespace std
 {
 class thread;
@@ -128,7 +131,7 @@ public:
     {
       critical_section critical;
 
-      xTaskCreate(foo, "Task", 256, this, tskIDLE_PRIORITY + 1, &_taskHandle);
+      xTaskCreate(foo, "Task", 512, this, tskIDLE_PRIORITY + 1, &_taskHandle);
       if (!_taskHandle)
         std::terminate();
 

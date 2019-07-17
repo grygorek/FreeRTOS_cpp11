@@ -39,6 +39,7 @@
 #include "semphr.h"
 #include "thread_gthread.h"
 #include "condition_variable.h"
+#include "gthr_key.h"
 
 #include <sys/time.h>
 
@@ -53,7 +54,7 @@ extern "C"
   // returns: 1 - thread system is active; 0 - thread system is not active
   static int __gthread_active_p() { return 1; }
 
-  typedef int __gthread_key_t;
+  typedef free_rtos_std::Key *__gthread_key_t;
   typedef int __gthread_once_t;
   typedef SemaphoreHandle_t __gthread_mutex_t;
   typedef SemaphoreHandle_t __gthread_recursive_mutex_t;
@@ -77,22 +78,39 @@ extern "C"
     if (!s_m)
       return 12; //POSIX error: ENOMEM
 
+    __gthread_once_t flag{true};
     xSemaphoreTakeRecursive(s_m, portMAX_DELAY);
-    if (*once == false)
-    {
-      *once = true;
-      func();
-    }
+    std::swap(*once, flag);
     xSemaphoreGiveRecursive(s_m);
+
+    if (flag == false)
+      func();
+
     return 0;
   }
 
-  static int __gthread_key_create(__gthread_key_t *keyp, void (*dtor)(void *)) {}
-  static int __gthread_key_delete(__gthread_key_t key) {}
+  static int __gthread_key_create(__gthread_key_t *keyp, void (*dtor)(void *))
+  {
+    return free_rtos_std::freertos_gthread_key_create(keyp, dtor);
+  }
 
-  static void *__gthread_getspecific(__gthread_key_t key) {}
-  static int __gthread_setspecific(__gthread_key_t key, const void *ptr) {}
+  static int __gthread_key_delete(__gthread_key_t key)
+  {
+    return free_rtos_std::freertos_gthread_key_delete(key);
+  }
 
+  static void *__gthread_getspecific(__gthread_key_t key)
+  {
+    return free_rtos_std::freertos_gthread_getspecific(key);
+  }
+
+  static int __gthread_setspecific(__gthread_key_t key, const void *ptr)
+  {
+    return free_rtos_std::freertos_gthread_setspecific(key, ptr);
+  }
+  //////////
+
+  //////////
   static inline int __gthread_mutex_destroy(__gthread_mutex_t *mutex)
   {
     vSemaphoreDelete(*mutex);
@@ -230,7 +248,7 @@ extern "C"
     auto ms{(*abs_timeout - now).milliseconds()};
 
     __gthread_mutex_unlock(mutex);
-    auto fTimeout{0 == ulTaskNotifyTake(pdFALSE, pdMS_TO_TICKS(ms))};
+    auto fTimeout{0 == ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(ms))};
     __gthread_mutex_lock(mutex);
 
     int result{0};

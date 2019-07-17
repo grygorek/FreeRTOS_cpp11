@@ -35,11 +35,15 @@
 #include <chrono>
 #include <mutex>
 #include <condition_variable>
+#include <future>
+#include <cassert>
 
 #include "FreeRTOS_time.h"
 
 #include "test_thread.h"
 #include "test_cv.h"
+#include "test_future.h"
+#include "test_once.h"
 
 int main(void)
 {
@@ -49,7 +53,7 @@ int main(void)
 
   while (1)
   {
-    std::this_thread::sleep_until(system_clock::now() + 2s);
+    std::this_thread::sleep_until(system_clock::now() + 200ms);
 
     DetachAfterThreadEnd();
     DetachBeforeThreadEnd();
@@ -60,9 +64,10 @@ int main(void)
     StartAndMoveOperator();
     StartAndMoveConstructor();
 
-    TestCV();
-    TestCVAny();
-    TestCVTimeout();
+    TestConditionVariable();
+
+    TestCallOnce();
+    TestFuture();
   }
 }
 

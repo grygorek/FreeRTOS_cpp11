@@ -31,93 +31,48 @@
 /// POSSIBILITY OF SUCH DAMAGE.
 ///
 
-#ifndef __THREAD_TEST_H__
-#define __THREAD_TEST_H__
+#ifndef __FREERTOS_GTHR_KEY_KEY_H__
+#define __FREERTOS_GTHR_KEY_KEY_H__
 
-#include <thread>
-#include <chrono>
+#include "thread_gthread.h"
+#include <unordered_map>
+#include <mutex>
 
-inline void DetachBeforeThreadEnd()
+namespace free_rtos_std
 {
-  using namespace std::chrono_literals;
-  std::thread t{[] {
-    std::this_thread::sleep_for(50ms);
-  }};
 
-  t.detach();
-}
-
-inline void DetachAfterThreadEnd()
+struct Key
 {
-  using namespace std::chrono_literals;
-  std::thread t{[] {
-  }};
+  using __gthread_t = free_rtos_std::gthr_freertos;
+  typedef void (*DestructorFoo)(void *);
 
-  std::this_thread::sleep_for(50ms);
-  t.detach();
-}
+  Key() = delete;
+  explicit Key(DestructorFoo des) : _desFoo{des} {}
 
-inline void JoinBeforeThreadEnd()
-{
-  using namespace std::chrono_literals;
-  std::thread t{[] {
-    std::this_thread::sleep_for(50ms);
-  }};
-
-  t.join();
-}
-
-inline void JoinAfterThreadEnd()
-{
-  using namespace std::chrono_literals;
-  std::thread t{[] {
-  }};
-
-  std::this_thread::sleep_for(50ms);
-  t.join();
-}
-
-inline void DestroyBeforeThreadEnd()
-{
-  //using namespace std::chrono_literals;
-  // will call std::terminate if enabled
-  //	std::thread t{[]{
-  //			std::this_thread::sleep_for(50ms);
-  //	}};
-}
-
-inline void DestroyNoStart()
-{
-  std::thread t;
-}
-
-inline void StartAndMoveOperator()
-{
-  using namespace std::chrono_literals;
-  std::thread tt;
-
+  void CallDestructor(__gthread_t::native_task_type task)
   {
-    std::thread t{[] {
-      std::this_thread::sleep_for(50ms);
-    }};
-    tt = std::move(t);
+    void *val;
+
+    {
+      std::lock_guard lg{_mtx};
+
+      auto item{_specValue.find(task)};
+      if (item == _specValue.end())
+        return;
+
+      val = const_cast<void *>(item->second);
+      _specValue.erase(item);
+    }
+
+    if (_desFoo && val)
+      _desFoo(val);
   }
 
-  tt.join();
-}
+  std::mutex _mtx;
+  DestructorFoo _desFoo;
+  std::unordered_map<__gthread_t::native_task_type, const void *> _specValue;
+};
 
-inline void StartAndMoveConstructor()
-{
-  using namespace std::chrono_literals;
+} // namespace free_rtos_std
 
-  std::thread t{[] {
-    std::this_thread::sleep_for(50ms);
-  }};
-
-  std::thread tt{std::move(t)};
-
-  //t.join(); this will terminate the program
-  tt.join();
-}
-
-#endif //__THREAD_TEST_H__
+#endif //__FREERTOS_GTHR_KEY_KEY_H__

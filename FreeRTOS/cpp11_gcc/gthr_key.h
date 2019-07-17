@@ -31,93 +31,17 @@
 /// POSSIBILITY OF SUCH DAMAGE.
 ///
 
-#ifndef __THREAD_TEST_H__
-#define __THREAD_TEST_H__
+#ifndef __FREERTOS_GTHR_KEY_H__
+#define __FREERTOS_GTHR_KEY_H__
 
-#include <thread>
-#include <chrono>
-
-inline void DetachBeforeThreadEnd()
+namespace free_rtos_std
 {
-  using namespace std::chrono_literals;
-  std::thread t{[] {
-    std::this_thread::sleep_for(50ms);
-  }};
+struct Key;
 
-  t.detach();
-}
+int freertos_gthread_key_create(Key **keyp, void (*dtor)(void *));
+int freertos_gthread_key_delete(Key *key);
+void *freertos_gthread_getspecific(Key *key);
+int freertos_gthread_setspecific(Key *key, const void *ptr);
+} // namespace free_rtos_std
 
-inline void DetachAfterThreadEnd()
-{
-  using namespace std::chrono_literals;
-  std::thread t{[] {
-  }};
-
-  std::this_thread::sleep_for(50ms);
-  t.detach();
-}
-
-inline void JoinBeforeThreadEnd()
-{
-  using namespace std::chrono_literals;
-  std::thread t{[] {
-    std::this_thread::sleep_for(50ms);
-  }};
-
-  t.join();
-}
-
-inline void JoinAfterThreadEnd()
-{
-  using namespace std::chrono_literals;
-  std::thread t{[] {
-  }};
-
-  std::this_thread::sleep_for(50ms);
-  t.join();
-}
-
-inline void DestroyBeforeThreadEnd()
-{
-  //using namespace std::chrono_literals;
-  // will call std::terminate if enabled
-  //	std::thread t{[]{
-  //			std::this_thread::sleep_for(50ms);
-  //	}};
-}
-
-inline void DestroyNoStart()
-{
-  std::thread t;
-}
-
-inline void StartAndMoveOperator()
-{
-  using namespace std::chrono_literals;
-  std::thread tt;
-
-  {
-    std::thread t{[] {
-      std::this_thread::sleep_for(50ms);
-    }};
-    tt = std::move(t);
-  }
-
-  tt.join();
-}
-
-inline void StartAndMoveConstructor()
-{
-  using namespace std::chrono_literals;
-
-  std::thread t{[] {
-    std::this_thread::sleep_for(50ms);
-  }};
-
-  std::thread tt{std::move(t)};
-
-  //t.join(); this will terminate the program
-  tt.join();
-}
-
-#endif //__THREAD_TEST_H__
+#endif //__FREERTOS_GTHR_KEY_H__
