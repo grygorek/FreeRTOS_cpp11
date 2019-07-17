@@ -45,6 +45,9 @@
 #include "test_future.h"
 #include "test_once.h"
 
+// For updates check my github page:
+// https://github.com/grygorek/FreeRTOS_cpp11
+
 int main(void)
 {
   using namespace std::chrono_literals;
