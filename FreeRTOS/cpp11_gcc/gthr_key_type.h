@@ -54,7 +54,7 @@ struct Key
     void *val;
 
     {
-      std::lock_guard lg{_mtx};
+      std::lock_guard<std::mutex> lg{_mtx};
 
       auto item{_specValue.find(task)};
       if (item == _specValue.end())
