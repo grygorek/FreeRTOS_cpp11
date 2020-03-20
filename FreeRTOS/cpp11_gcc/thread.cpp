@@ -38,6 +38,17 @@
 
 #include "gthr_key_type.h"
 
+// trick to fool libgcc and make it detects we are using threads
+void
+__pthread_key_create()
+{
+}
+
+void
+pthread_cancel()
+{
+}
+
 namespace free_rtos_std
 {
 extern Key *s_key;

@@ -1208,15 +1208,13 @@ That is it. From now on std::promise, std::future, etc. will work.
 
 ### thread_local
 
-I could not make it work. Sad.
+libgcc supports multithreading thanks to a trick to determine whether the executable
+uses pthread (see [this](https://stackoverflow.com/questions/46369679/why-do-functions-using-stdmutex-make-a-null-check-of-the-address-of-pthread-ke/46372177#46372177)
+link and [this](https://github.com/gcc-mirror/gcc/blob/master/libgcc/gthr-posix.h#L215) one).
 
-GCC for free standing systems (bare metal, no OS) is compiled with 
-`__gthread_active_p` function returning 0. My implementation returns 1 however,
-GCC sees 0. Most likely function got inlined during GCC build time. 
-Zero indicates that a thread system is not active. In that case a single 
-instance of a variable is created, insted of one per thread. 
-
-Please let me know if there are other features that do not work.
+Our own trick is to fool libgcc by providing a dummy `__pthread_key_create`
+and `pthread_cancel` functions. This way `__gthread_active_p` returns 1
+and libgcc enables multithreading and thread_local support.
 
 ## System Time
 
