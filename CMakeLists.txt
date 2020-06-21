@@ -91,9 +91,6 @@ SET(CMAKE_LEGACY_CYGWIN_WIN32 0)
 #	include
 #)
 
-# Enable C++11 multithreading with FreeRTOS
-add_compile_definitions(_GCC_MULTITHREAD_FREERTOS_ENABLE)
-
 file(GLOB LINKER_SCRIPTS  "${CMAKE_SOURCE_DIR}/*.ld")
 file(COPY ${LINKER_SCRIPTS} DESTINATION ${CMAKE_BINARY_DIR}) 
 
