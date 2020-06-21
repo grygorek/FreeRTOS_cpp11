@@ -122,7 +122,7 @@ thread.cpp              --> Definitions required by std::thread class
 gthr_key.cpp            --> Definition required by futures
 gthr_key.h              --> Declarations
 gthr_key_type.h         --> Helper class for local thread storage
-gthr-FreeRTOS.h         --> GCC Hook (thread and mutex)
+bits/gthr-default.h     --> FreeRTOS GCC Hook (thread and mutex, see below)
 
 future.cc               --> Taken as is from GCC code
 mutex.cc                --> Taken as is from GCC code
@@ -173,12 +173,10 @@ int main()
   processor.join();
 }
 ```
-However, this program will not build yet!
 
 ## GCC Hook
 
-The problem is that GCC cannot see functions that implement the threading 
-interface using FreeRTOS. Required implementation is in `gthr-FreeRTOS.h`. 
+For the library to work, the GCC must see the threading interface implementation.
 
 The interesting file is the `gthr.h` located in a GCC instalation directory. 
 This is what I have got in my ARM distribution: 
@@ -230,35 +228,18 @@ The end of the file looks like this:
 ...
 ```
 
-The file includes a default implementation from `gthr-default.h`. What would be
-a default implementation for a system without a system? Yes, empty functions.
-So, how to replace the default implementation with the one from the library? 
+The file includes a default implementation from `gthr-default.h`. This file 
+is in the same directory as `gthr.h`. What would be a default implementation 
+for a system without a system? Yes, empty functions. So, how to replace 
+the default implementation with the one from the library? 
 
-Unfortunately, the only way I have found to hook to a compiler is to modify
-the file `gthr.h` in the compiler's distribution itself. It sounds little bit 
-scary, doesn't it? 
+This library has it's own `gthr-default.h` file with required code in it
+and stored exactly in the `FreeRTOS/cpp11_gcc/bits` directory.
 
-The easiest and the least intrusive way is to replace the single include 
-with the code: 
-
-```
-#ifdef _GCC_MULTITHREAD_FREERTOS_ENABLE
-#include "gthr-FreeRTOS.h"
-#else
-#include <bits/gthr-default.h>
-#endif
-```
-
-
-
-Then `_GCC_MULTITHREAD_FREERTOS_ENABLE` must be defined during the application
-project build. Otherwise, the default header will be included. Might be handy
-when the multithread features of C++ are not required. 
-
-Probably the easiest way is to edit all of the files. If you know the
-architecture of your processor, you can change only the related one. 
-
-Now, project should build.
+This file is included only by exactly `gthr.h`. So, as long as the compiler 
+knows the path to `cpp11_gcc` it will also find the default implementation
+in the `bits` directory. Path to `cpp11_gcc` is given in the included cmake
+script.
 
 # Library Implementation
 ## Mutex
