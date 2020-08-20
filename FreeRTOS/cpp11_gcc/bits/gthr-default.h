@@ -139,17 +139,17 @@ extern "C"
   static inline int __gthread_recursive_mutex_lock(
       __gthread_recursive_mutex_t *mutex)
   {
-    return xSemaphoreTakeRecursive(*mutex, portMAX_DELAY);
+    return (xSemaphoreTakeRecursive(*mutex, portMAX_DELAY) == pdTRUE) ? 0 : 1;
   }
   static inline int __gthread_recursive_mutex_trylock(
       __gthread_recursive_mutex_t *mutex)
   {
-    return xSemaphoreTakeRecursive(*mutex, 0);
+    return (xSemaphoreTakeRecursive(*mutex, 0) == pdTRUE) ? 0 : 1;
   }
   static inline int __gthread_recursive_mutex_unlock(
       __gthread_recursive_mutex_t *mutex)
   {
-    return xSemaphoreGiveRecursive(*mutex);
+    return (xSemaphoreGiveRecursive(*mutex) == pdTRUE) ? 0 : 1;
   }
 ////////////
 
@@ -182,7 +182,7 @@ extern "C"
     gettimeofday(&now, NULL);
 
     auto t = (*abs_timeout - now).milliseconds();
-    return xSemaphoreTake(*m, pdMS_TO_TICKS(t));
+    return (xSemaphoreTake(*m, pdMS_TO_TICKS(t)) == pdTRUE) ? 0 : 1;
   }
 
   static inline int __gthread_recursive_mutex_timedlock(
@@ -192,7 +192,7 @@ extern "C"
     gettimeofday(&now, NULL);
 
     auto t = (*abs_time - now).milliseconds();
-    return xSemaphoreTakeRecursive(*m, pdMS_TO_TICKS(t));
+    return (xSemaphoreTakeRecursive(*m, pdMS_TO_TICKS(t)) == pdTRUE) ? 0 : 1;
   }
 
   // All functions returning int should return zero on success or the error
