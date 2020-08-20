@@ -31,54 +31,39 @@
 /// POSSIBILITY OF SUCH DAMAGE.
 ///
 
-#include <thread>
+#ifndef __MTX_TEST_H__
+#define __MTX_TEST_H__
+
 #include <chrono>
 #include <mutex>
-#include <condition_variable>
-#include <future>
+
 #include <cassert>
 
-#include "FreeRTOS_time.h"
-
-#include "test_thread.h"
-#include "test_cv.h"
-#include "test_future.h"
-#include "test_once.h"
-#include "test_mutex.h"
-
-// For updates check my github page:
-// https://github.com/grygorek/FreeRTOS_cpp11
-
-int main(void)
+inline void TestTimedMtx()
 {
   using namespace std::chrono_literals;
   using namespace std::chrono;
-  SetSystemClockTime(time_point<system_clock>(1550178897s));
 
-  while (1)
-  {
-    std::this_thread::sleep_until(system_clock::now() + 200ms);
+  std::timed_mutex to_mtx;
 
-    TestTimedMtx();
+  // expected the mutex is available
+  to_mtx.lock();
 
-    DetachAfterThreadEnd();
-    DetachBeforeThreadEnd();
-    JoinAfterThreadEnd();
-    JoinBeforeThreadEnd();
-    DestroyBeforeThreadEnd();
-    DestroyNoStart();
-    StartAndMoveOperator();
-    StartAndMoveConstructor();
+  // expected the mutex is not available
+  assert(to_mtx.try_lock() == false);
+  assert(to_mtx.try_lock_for(10ms) == false);
+  assert(to_mtx.try_lock_until(system_clock::now() + 200ms) == false);
 
-    TestConditionVariable();
+  to_mtx.unlock();
 
-    TestCallOnce();
-    TestFuture();
-  }
+  assert(to_mtx.try_lock() == true);
+  to_mtx.unlock();
+
+  assert(to_mtx.try_lock_for(10ms) == true);
+  to_mtx.unlock();
+
+  assert(to_mtx.try_lock_until(system_clock::now() + 200ms) == true);
+  to_mtx.unlock();
 }
 
-/* System clock frequency. */
-extern "C" uint32_t SystemCoreClockFreq()
-{
-  return 20'000'000;
-}
+#endif //__MTX_TEST_H__
