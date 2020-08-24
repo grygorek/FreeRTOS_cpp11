@@ -59,7 +59,7 @@ int main(void)
   {
     std::this_thread::sleep_until(system_clock::now() + 200ms);
 
-    TestTimedMtx();
+    TestMtx();
 
     DetachAfterThreadEnd();
     DetachBeforeThreadEnd();
