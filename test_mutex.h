@@ -39,6 +39,21 @@
 
 #include <cassert>
 
+inline void TestRecursiveMtx()
+{
+  std::recursive_mutex to_mtx;
+
+  // expected the mutex is available
+  to_mtx.lock();
+
+  // expected the mutex is available for the same thread
+  assert(to_mtx.try_lock() == true);
+
+  //call twice according to the ownership level
+  to_mtx.unlock();
+  to_mtx.unlock();
+}
+
 inline void TestTimedMtx()
 {
   using namespace std::chrono_literals;
@@ -64,6 +79,12 @@ inline void TestTimedMtx()
 
   assert(to_mtx.try_lock_until(system_clock::now() + 200ms) == true);
   to_mtx.unlock();
+}
+
+inline void TestMtx()
+{
+  TestRecursiveMtx();
+  TestTimedMtx();
 }
 
 #endif //__MTX_TEST_H__
