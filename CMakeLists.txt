@@ -130,9 +130,9 @@ add_subdirectory(FreeRTOS)
 
 add_executable(testapp.elf  
   main.cpp
-  sys.cpp
-  FreeRTOS_hooks.cpp
-  FreeRTOS_memory.cpp
+  sys_common/FreeRTOS_hooks.cpp
+  sys_common/FreeRTOS_memory.cpp
+  sys_common/sys.cpp
   startup_mk64f12.cpp
 )
 
