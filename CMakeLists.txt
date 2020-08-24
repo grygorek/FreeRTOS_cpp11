@@ -91,7 +91,7 @@ SET(CMAKE_LEGACY_CYGWIN_WIN32 0)
 #	include
 #)
 
-file(GLOB LINKER_SCRIPTS  "${CMAKE_SOURCE_DIR}/*.ld")
+file(GLOB LINKER_SCRIPTS  "${CMAKE_SOURCE_DIR}/lib_test_nxp_mk64/*.ld")
 file(COPY ${LINKER_SCRIPTS} DESTINATION ${CMAKE_BINARY_DIR}) 
 
 set(CMAKE_EXE_LINKER_FLAGS "-Wl,--wrap=malloc -Wl,--wrap=free")
@@ -120,6 +120,8 @@ SET(CMAKE_ASM_FLAGS "-x assembler-with-cpp ${COMPILE_PART_FLAGS}"  CACHE INTERNA
 #     FreeRTOS library  
 #----------------------------
 include_directories( 
+  lib_test_nxp_mk64
+
   FreeRTOS/Source/include 
   FreeRTOS 
   FreeRTOS/Source/portable/${COMPILER_NAME}/${CPU_ARCH}
@@ -129,11 +131,12 @@ add_subdirectory(FreeRTOS)
 #-----------------------------
 
 add_executable(testapp.elf  
-  main.cpp
+  lib_test_nxp_mk64/startup_mk64f12.cpp
+  lib_test_nxp_mk64/main.cpp
+
   sys_common/FreeRTOS_hooks.cpp
   sys_common/FreeRTOS_memory.cpp
   sys_common/sys.cpp
-  startup_mk64f12.cpp
 )
 
 target_link_libraries(
