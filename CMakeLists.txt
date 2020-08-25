@@ -40,3 +40,13 @@ if(k64frdmevk)
   project(lib_test_nxp_mk64 C CXX ASM)
   include(lib_test_nxp_mk64.cmake)
 endif()
+
+# Print output section size
+add_custom_command(
+  OUTPUT print_size
+  POST_BUILD COMMAND ${COMPILER_PREFIX}-size ${PROJECT_NAME}.elf 
+  DEPENDS ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.elf
+  COMMENT "Binary size"
+)
+
+add_custom_target(size ALL DEPENDS print_size) 

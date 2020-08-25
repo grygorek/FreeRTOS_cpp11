@@ -76,7 +76,7 @@ include_directories(
 
 add_subdirectory(FreeRTOS)
 
-add_executable(testapp.elf  
+add_executable(${PROJECT_NAME}.elf  
   lib_test_nxp_mk64/startup_mk64f12.cpp
   lib_test_nxp_mk64/main.cpp
 
@@ -86,6 +86,6 @@ add_executable(testapp.elf
 )
 
 target_link_libraries(
-  testapp.elf
+  ${PROJECT_NAME}.elf
   freeRTOS
 )
