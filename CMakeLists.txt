@@ -33,12 +33,23 @@
 
 cmake_minimum_required(VERSION 3.0)
 
-
 include(compiler.cmake)
 
 if(k64frdmevk)
   project(lib_test_nxp_mk64 C CXX ASM)
   include(lib_test_nxp_mk64.cmake)
+elseif(lm3s811)
+  project(qemu_lm3s811 C CXX ASM)
+  include(qemu_lm3s811.cmake)
+  # Run this demo in QEMU: 
+  #  $ qemu-system-arm -M lm3s811evb -kernel qemu_lm3s811.bin
+else(k64frdmevk)
+  message(STATUS " ")
+  message(STATUS "  Target is missing, Add -D<target>=1, where `target` is:")
+  message(STATUS "     k64frdmevk  - NXP K64FRDM board")
+  message(STATUS "     lm3s811     - TI board supported by qemu")
+  message(STATUS " ")
+  message(FATAL_ERROR "Error: Target not specified")
 endif()
 
 # Print output section size
