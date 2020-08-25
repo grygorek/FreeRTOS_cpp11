@@ -33,7 +33,7 @@
 
 cmake_minimum_required(VERSION 3.0)
 
-set(frtos_port Source/portable/GCC/ARM_CM4F)
+set(frtos_port Source/portable/GCC/${CPU_ARCH})
 
 include_directories(
   cpp11_gcc 
@@ -42,7 +42,6 @@ include_directories(
 )
 
 
-# CM4 -> arm-none-eabi\thumb\v7e-m+fp\hard\bits\gthr.h => #include "gthr-FreeRTOS.h" 
 add_library(freeRTOS STATIC
   cpp11_gcc/condition_variable.cpp
   cpp11_gcc/freertos_time.cpp
