@@ -33,112 +33,31 @@
 
 cmake_minimum_required(VERSION 3.0)
 
-# ARM Cortex-M4F settings
-###########################
+include(compiler.cmake)
+
 if(k64frdmevk)
-  message(STATUS "Building: K64FRDM EVK board")
-  set(TARGET_BOARD "k64FRDMevk" CACHE INTERNAL "" FORCE)
-  set(TARGET_CPU "mk64f12")
-  set(CPU_ARCH "ARM_CM4F")
-  set(CPU_VENDOR "NXP")
-  #SET(CONFIG_DEFS "-DCPU_MK64FN1M0VDC12 -DCPU_MK64FN1M0VLL12 -D__USE_CMSIS -DARMCM4_FP -DENET_ENHANCEDBUFFERDESCRIPTOR_MODE")
-  SET(CPU_FLAGS "-mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16")
+  project(lib_test_nxp_mk64 C CXX ASM)
+  include(lib_test_nxp_mk64.cmake)
+elseif(lm3s811)
+  project(qemu_lm3s811 C CXX ASM)
+  include(qemu_lm3s811.cmake)
+  # Run this demo in QEMU: 
+  #  $ qemu-system-arm -M lm3s811evb -kernel qemu_lm3s811.bin
 else(k64frdmevk)
+  message(STATUS " ")
+  message(STATUS "  Target is missing, Add -D<target>=1, where `target` is:")
+  message(STATUS "     k64frdmevk  - NXP K64FRDM board")
+  message(STATUS "     lm3s811     - TI board supported by qemu")
+  message(STATUS " ")
   message(FATAL_ERROR "Error: Target not specified")
-endif(k64frdmevk)
- 
-# GCC ARM compiler settings
-##############################
-set(COMPILER_NAME "GCC")
-if(WIN32)
-  set(COMPILER_PATH "") # add to system path 
-  SET(COMPILER_POSTFIX ".exe")
-endif(WIN32)
-if(LINUX)
-  SET(COMPILER_PATH "")
-  SET(COMPILER_POSTFIX "")
-endif(LINUX)
-SET(COMPILER_PREFIX arm-none-eabi)
+endif()
 
-SET(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
-SET(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "")
-SET(CMAKE_C_COMPILER_WORKS TRUE)
-SET(CMAKE_CXX_COMPILER_WORKS TRUE)
-SET(CMAKE_SYSTEM_NAME Generic)
-SET(CMAKE_SYSTEM_VERSION TRUE)
-SET(CMAKE_CROSSCOMPILING TRUE)
-SET(CMAKE_USE_RELATIVE_PATHS TRUE)
-#SET(CMAKE_C_COMPILER ${COMPILER_PATH}/bin/${COMPILER_PREFIX}-gcc${COMPILER_POSTFIX})
-#SET(CMAKE_CXX_COMPILER ${COMPILER_PATH}/bin/${COMPILER_PREFIX}-g++${COMPILER_POSTFIX})
-#SET(CMAKE_ASM_COMPILER ${COMPILER_PATH}/bin/${COMPILER_PREFIX}-g++${COMPILER_POSTFIX})
-SET(CMAKE_C_COMPILER   ${COMPILER_PREFIX}-gcc${COMPILER_POSTFIX})
-SET(CMAKE_CXX_COMPILER ${COMPILER_PREFIX}-g++${COMPILER_POSTFIX})
-SET(CMAKE_ASM_COMPILER ${COMPILER_PREFIX}-g++${COMPILER_POSTFIX})
-
-SET(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
-SET(CMAKE_LEGACY_CYGWIN_WIN32 0)
-
-
-
-# GCC 7.2.1 includes needed. Or set env path
-#INCLUDE_DIRECTORIES(
-#	${COMPILER_PATH}/${COMPILER_PREFIX}/include
-#	${COMPILER_PATH}/${COMPILER_PREFIX}/include/c++/7.2.1
-#	${COMPILER_PATH}/${COMPILER_PREFIX}/include/c++/7.2.1/arm-none-eabi
-#	${COMPILER_PATH}/${COMPILER_PREFIX}/include/c++/7.2.1/backward
-#	${COMPILER_PATH}/lib/gcc/arm-none-eabi/7.2.1/include
-#	${COMPILER_PATH}/lib/gcc/arm-none-eabi/7.2.1/include-fixed
-#	include
-#)
-
-file(GLOB LINKER_SCRIPTS  "${CMAKE_SOURCE_DIR}/*.ld")
-file(COPY ${LINKER_SCRIPTS} DESTINATION ${CMAKE_BINARY_DIR}) 
-
-set(CMAKE_EXE_LINKER_FLAGS "-Wl,--wrap=malloc -Wl,--wrap=free")
-set(LINKER_SCRIPT "Linker.ld")
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -T ${LINKER_SCRIPT}")
-
-###################
-# Project settings
-###################
-
-project(rtos C CXX ASM)
-
-#      Build Settings
-#------------------------
-SET(COMPILE_PART_FLAGS  "${CPU_FLAGS} -Os")
-if(DEBUG)
-  SET(COMPILE_PART_FLAGS  "${CPU_FLAGS} -g3")
-endif(DEBUG)
-
-SET(COMPILE_COMMON_FLAGS "${CONFIG_DEFS} ${COMPILE_PART_FLAGS} -Wall -Wextra -Wpedantic -fno-common -fmessage-length=0 -ffunction-sections -fdata-sections")
- 
-SET(CMAKE_C_FLAGS   "${COMPILE_COMMON_FLAGS} -std=c11 -nostdlib -ffreestanding -fno-builtin " CACHE INTERNAL "" FORCE)
-SET(CMAKE_CXX_FLAGS "${COMPILE_COMMON_FLAGS} -std=c++1z -nostdlib -ffreestanding -fno-builtin -fno-exceptions -fno-rtti -fno-unwind-tables" CACHE INTERNAL "" FORCE)
-SET(CMAKE_ASM_FLAGS "-x assembler-with-cpp ${COMPILE_PART_FLAGS}"  CACHE INTERNAL "" FORCE)
-
-#     FreeRTOS library  
-#----------------------------
-include_directories( 
-  FreeRTOS/Source/include 
-  FreeRTOS 
-  FreeRTOS/Source/portable/${COMPILER_NAME}/${CPU_ARCH}
-  FreeRTOS/cpp11_gcc
-)
-add_subdirectory(FreeRTOS)
-#-----------------------------
-
-add_executable(testapp.elf  
-  main.cpp
-  sys.cpp
-  FreeRTOS_hooks.cpp
-  FreeRTOS_memory.cpp
-  startup_mk64f12.cpp
+# Print output section size
+add_custom_command(
+  OUTPUT print_size
+  POST_BUILD COMMAND ${COMPILER_PREFIX}-size ${PROJECT_NAME}.elf 
+  DEPENDS ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.elf
+  COMMENT "Binary size"
 )
 
-target_link_libraries(
-  testapp.elf
-  freeRTOS
-)
-
-
+add_custom_target(size ALL DEPENDS print_size) 

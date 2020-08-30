@@ -2,7 +2,7 @@
 #
 # @author: Piotr Grygorczuk grygorek@gmail.com
 #
-# @copyright Copyright 2019 Piotr Grygorczuk
+# @copyright Copyright 2020 Piotr Grygorczuk
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -33,32 +33,45 @@
 
 cmake_minimum_required(VERSION 3.0)
 
-set(frtos_port Source/portable/GCC/${CPU_ARCH})
 
-include_directories(
-  cpp11_gcc 
-  Source/include
-  ${frtos_port}
-)
+# GCC ARM compiler settings
+##############################
+
+set(COMPILER_NAME "GCC")
+if(WIN32)
+  set(COMPILER_PATH "") # add to system path 
+  SET(COMPILER_POSTFIX ".exe")
+endif(WIN32)
+if(LINUX)
+  SET(COMPILER_PATH "")
+  SET(COMPILER_POSTFIX "")
+endif(LINUX)
+SET(COMPILER_PREFIX arm-none-eabi)
+
+SET(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
+SET(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "")
+SET(CMAKE_C_COMPILER_WORKS TRUE)
+SET(CMAKE_CXX_COMPILER_WORKS TRUE)
+SET(CMAKE_SYSTEM_NAME Generic)
+SET(CMAKE_SYSTEM_VERSION TRUE)
+SET(CMAKE_CROSSCOMPILING TRUE)
+SET(CMAKE_USE_RELATIVE_PATHS TRUE)
+SET(CMAKE_C_COMPILER   ${COMPILER_PREFIX}-gcc${COMPILER_POSTFIX})
+SET(CMAKE_CXX_COMPILER ${COMPILER_PREFIX}-g++${COMPILER_POSTFIX})
+SET(CMAKE_ASM_COMPILER ${COMPILER_PREFIX}-g++${COMPILER_POSTFIX})
+
+SET(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+SET(CMAKE_LEGACY_CYGWIN_WIN32 0)
 
 
-add_library(freeRTOS STATIC
-  cpp11_gcc/condition_variable.cpp
-  cpp11_gcc/freertos_time.cpp
-  cpp11_gcc/gthr_key.cpp
-  cpp11_gcc/thread.cpp
-  cpp11_gcc/future.cc
-  cpp11_gcc/mutex.cc
 
-  Source/croutine.c
-  Source/event_groups.c
-  Source/list.c
-  Source/queue.c
-  Source/stream_buffer.c
-  Source/tasks.c
-  Source/timers.c
-
-  Source/portable/MemMang/heap_4.c
-  ${frtos_port}/port.c
-)
-
+# GCC 7.2.1 includes. Or set env path
+#INCLUDE_DIRECTORIES(
+#	${COMPILER_PATH}/${COMPILER_PREFIX}/include
+#	${COMPILER_PATH}/${COMPILER_PREFIX}/include/c++/7.2.1
+#	${COMPILER_PATH}/${COMPILER_PREFIX}/include/c++/7.2.1/arm-none-eabi
+#	${COMPILER_PATH}/${COMPILER_PREFIX}/include/c++/7.2.1/backward
+#	${COMPILER_PATH}/lib/gcc/arm-none-eabi/7.2.1/include
+#	${COMPILER_PATH}/lib/gcc/arm-none-eabi/7.2.1/include-fixed
+#	include
+#)

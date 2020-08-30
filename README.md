@@ -33,14 +33,22 @@ except one (`freertos_time.h` to set system time).
 Attached is an example cmake project. The target is for NXP K64F Cortex M4
 microcontroller. It can be built from the command line:
 
+```console
+$ cmake ../FreeRTOS_cpp11 -G "Eclipse CDT4 - Unix Makefiles" -Dk64frdmevk=1
+$ cmake --build .
 ```
- cmake ../FreeRTOS_cpp11 -G "Eclipse CDT4 - Unix Makefiles" -Dk64frdmevk=1
- cmake --build .
+
+[Another example](qemu_lm3s811/README.md) is TI LM3S811 and is used to run the program in QEMU instead 
+of the physical hardware. It can be build from the command line:
+
+```console
+$ cmake ../FreeRTOS_cpp11 -G "Eclipse CDT4 - Unix Makefiles" -Dlm3s811=1
+$ cmake --build .
 ```
 
 # Background
 
-The C++11 standard introduced unified multithreading interface. The standard
+The C++11 standard introduced unified multithreading interface. The standard 
 defines the interface only. It is up to the compiler vendors how to implement it.
 Multithreading requires a tasks sheduler running at low level which implicates
 an operating system is present. Both, scheduler and OS are beyond of 
