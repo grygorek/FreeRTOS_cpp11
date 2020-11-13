@@ -39,14 +39,6 @@ GROUP (
   "crtn.o"
 )
  
- 
-/*
-GROUP (
-  "libstdc++_nano.a"
-  "libsupc++_nano.a"
-  "libc_nano.a"
-) 
-*/ 
 MEMORY
 {
     FLASH (rx) : ORIGIN = 0x00000000, LENGTH = 64K
@@ -97,19 +89,21 @@ SECTIONS
         _etext = .;
     } > FLASH
 
-    .ARM.extab : ALIGN(8)
-	{
-	    *(.ARM.extab* .gnu.linkonce.armextab.*)
-	} > FLASH
-	
-	__exidx_start = .;
-	.ARM.exidx : ALIGN(8)
-	{
-	    *(.ARM.exidx.* .gnu.linkonce.armexidx.*)
-	} > FLASH
-	__exidx_end = .;
-	
-	_etext = .;
+    .ARM.extab : ALIGN(8) 
+    {
+      __extab_start = .;
+      *(.ARM.extab* .gnu.linkonce.armextab.*)
+      __extab_end = .;
+    } > FLASH
+
+    .ARM.exidx : ALIGN(8)
+    {
+      __exidx_start = .;
+      *(.ARM.exidx* .gnu.linkonce.armexidx.*)
+      __exidx_end = .;
+    } > FLASH
+ 
+    _etext = .;
 	
     .data : AT(_etext) ALIGN(8)
     {
