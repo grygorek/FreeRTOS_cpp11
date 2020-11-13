@@ -101,16 +101,17 @@ SECTIONS
      */
     .ARM.extab : ALIGN(8) 
     {
+      __extab_start = .;
         *(.ARM.extab* .gnu.linkonce.armextab.*)
+      __extab_end = .;
     } > PROGRAM_FLASH
-
-    __exidx_start = .;
 
     .ARM.exidx : ALIGN(8)
     {
+      __exidx_start = .;
         *(.ARM.exidx* .gnu.linkonce.armexidx.*)
+      __exidx_end = .;
     } > PROGRAM_FLASH
-    __exidx_end = .;
  
     _etext = .;
         
