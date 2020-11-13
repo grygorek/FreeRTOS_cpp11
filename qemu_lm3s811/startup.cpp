@@ -162,7 +162,12 @@ extern unsigned long _ebss;
 //*****************************************************************************
 static void free_rtos_main(void*)
 {
+  // ISO C++ forbits calling 'main' but it must be done for embedded.
+  // So, suppressing warning: ISO C++ forbids taking address of function '::main'
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
   main();
+#pragma GCC diagnostic pop
 }
 
 __attribute__((section(".after_vectors.reset"))) void ResetISR(void)
