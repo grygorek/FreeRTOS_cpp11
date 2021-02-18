@@ -47,8 +47,6 @@ add_library(freeRTOS STATIC
   cpp11_gcc/freertos_time.cpp
   cpp11_gcc/gthr_key.cpp
   cpp11_gcc/thread.cpp
-  cpp11_gcc/future.cc
-  cpp11_gcc/mutex.cc
 
   Source/croutine.c
   Source/event_groups.c
