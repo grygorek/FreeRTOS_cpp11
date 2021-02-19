@@ -76,6 +76,7 @@ include_directories(
 )
 
 add_subdirectory(FreeRTOS)
+add_subdirectory(libstdc++_gcc)
 
 add_executable(${PROJECT_NAME}.elf  
   lib_test_nxp_mk64/startup_mk64f12.cpp
@@ -89,4 +90,5 @@ add_executable(${PROJECT_NAME}.elf
 target_link_libraries(
   ${PROJECT_NAME}.elf
   freeRTOS
+  std++_freertos
 )
