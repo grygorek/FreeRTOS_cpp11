@@ -1,0 +1,46 @@
+This directory contains number of subdirectories and files which are
+covered with different licenses. 
+
+* FreeRTOS_cpp11 library
+The main product is FreeRTOS_cpp11 library (for short, called 
+the library), located in FreeRTOS/cpp11_gcc subdirectory.
+It is covered with MIT license.
+
+* FreeRTOS - real time operating system
+For the convinience of verification and validation, source of FreeRTOS
+operating system, which is not part of the library, is included 
+and located in FreeRTOS/source subdirectory. FreeRTOS is covered
+with its own license which is stored in FreeRTOS/license subdirectory.
+
+* GCC Runtime library
+ARM GCC compiler for bare metal systems has certain parts of the Runtime
+library excluded from its build. In order to enable full functionality of
+the FreeRTOS_cpp11 library, three files: mutex.cc, future.cc and
+condition_variable.cc must be included in the GCC build. For the user 
+convinience, those 3 files are included in libstdc++_gcc subdirectory and 
+linked with the test application. GCC runtime is covered with a license 
+described in libstdc++_gcc/license subdirectory.
+
+* Remaining files are demos and examples supplied by FreeRTOS or silicon 
+vendors, some are part of a build system and library test files, etc. 
+In case of doubts, each has a license text included at the top of the file.
+
+Copyright 2021 Piotr Grygorczuk <grygorek@gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
