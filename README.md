@@ -1340,3 +1340,8 @@ My target was to make C++ multithreading available over FreeRTOS API. So, I did
 not bother to make POSIX C interface working. For that reason I believe 
 code in `gthr-FreeRTOS.h` would not compile in plain C project (have not even
 tried it).
+
+# License
+
+Files in this directory and subdirectories are covered with different licenses.
+Please have a look at LICENSE file in root directory for details.
