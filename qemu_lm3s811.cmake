@@ -69,6 +69,7 @@ include_directories(
 )
 
 add_subdirectory(FreeRTOS)
+add_subdirectory(libstdc++_gcc)
 
 add_executable(${PROJECT_NAME}.elf  
   sys_common/FreeRTOS_hooks.cpp
