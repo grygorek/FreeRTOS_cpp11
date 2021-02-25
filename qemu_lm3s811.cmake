@@ -46,12 +46,13 @@ endif(DEBUG)
 
 # lto is broken in gcc 8.2
 # set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-SET(COMPILE_COMMON_FLAGS "${COMPILE_PART_FLAGS} -Wall -Wextra -Wpedantic -fno-common -fmessage-length=0 -ffunction-sections -fdata-sections")
+SET(COMPILE_COMMON_FLAGS "${CONFIG_DEFS} ${COMPILE_PART_FLAGS} -Wall -Wextra -Wpedantic -fno-common  \
+                        -fmessage-length=0 -ffunction-sections -fdata-sections")
 
 # When enabling exceptions, change the linker script to link libstdc++.a instead of libstdc++_nano.a
 # Note: It is expect LM3S811 has got not enough memory to build with full libstdc++.
-SET(CMAKE_C_FLAGS   "${COMPILE_COMMON_FLAGS} -std=c11 -nostdlib -ffreestanding -fno-builtin " CACHE INTERNAL "" FORCE)
-SET(CMAKE_CXX_FLAGS "${COMPILE_COMMON_FLAGS} -std=c++1z -nostdlib -ffreestanding -fno-builtin -fno-exceptions -fno-rtti -fno-unwind-tables" CACHE INTERNAL "" FORCE)
+SET(CMAKE_C_FLAGS   "${COMPILE_COMMON_FLAGS} -std=c17 -nostdlib -ffreestanding -fno-builtin " CACHE INTERNAL "" FORCE)
+SET(CMAKE_CXX_FLAGS "${COMPILE_COMMON_FLAGS} -std=c++2a -nostdlib -ffreestanding -fno-builtin -fno-exceptions -fno-rtti -fno-unwind-tables" CACHE INTERNAL "" FORCE)
 SET(CMAKE_ASM_FLAGS "-x assembler-with-cpp ${COMPILE_PART_FLAGS}"  CACHE INTERNAL "" FORCE)
 
 # definition required by the demo project
