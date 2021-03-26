@@ -45,5 +45,6 @@ add_library(freeRTOS STATIC
 
   Source/portable/MemMang/heap_4.c
   ${frtos_port}/port.c
+  ${frtos_port}/portASM.S
 )
 

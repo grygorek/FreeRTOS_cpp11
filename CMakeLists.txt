@@ -33,6 +33,9 @@ elseif(lm3s811)
   include(qemu_lm3s811.cmake)
   # Run this demo in QEMU: 
   #  $ qemu-system-arm -M lm3s811evb -kernel qemu_lm3s811.bin
+elseif(armca9)
+  project(test_ca9 C CXX ASM)
+  include(vexpress-ca9.cmake)
 else(k64frdmevk)
   message(STATUS " ")
   message(STATUS "  Target is missing, Add -D<target>=1, where `target` is:")
