@@ -27,7 +27,6 @@
 #include "thread_gthread.h"
 
 #include <list>
-#include <algorithm>
 
 namespace free_rtos_std
 {
