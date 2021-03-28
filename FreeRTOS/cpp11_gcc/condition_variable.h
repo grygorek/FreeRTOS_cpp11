@@ -27,6 +27,7 @@
 #include "thread_gthread.h"
 
 #include <list>
+#include <bits/functexcept.h>
 
 namespace free_rtos_std
 {
@@ -34,11 +35,11 @@ namespace free_rtos_std
 class semaphore
 {
 public:
-  semaphore()
+  semaphore() : _xSemaphore { xSemaphoreCreateBinary() }
   {
-    vSemaphoreCreateBinary(_xSemaphore);
     if (!_xSemaphore)
       std::__throw_system_error(12); // POSIX error: no memory
+    xSemaphoreGive(_xSemaphore);
   }
 
   void lock() { xSemaphoreTake(_xSemaphore, portMAX_DELAY); }
