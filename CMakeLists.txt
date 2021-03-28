@@ -22,9 +22,6 @@ cmake_minimum_required(VERSION 3.0)
 
 include(compiler.cmake)
 
-# enable threads
-set(CONFIG_DEFS -D_GLIBCXX_HAS_GTHREADS=1)
-
 if(k64frdmevk)
   project(lib_test_nxp_mk64 C CXX ASM)
   include(lib_test_nxp_mk64.cmake)
