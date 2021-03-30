@@ -24,6 +24,7 @@
 #include <condition_variable>
 #include <future>
 #include <cassert>
+#include <cstdint>
 
 #include "FreeRTOS_time.h"
 
@@ -46,7 +47,7 @@ int main(void)
   {
     std::this_thread::sleep_until(system_clock::now() + 200ms);
 
-    TestMtx();
+   TestMtx();
 
     DetachAfterThreadEnd();
     DetachBeforeThreadEnd();
@@ -62,6 +63,7 @@ int main(void)
     TestCallOnce();
     TestFuture();
   }
+  return 0;
 }
 
 /* System clock frequency. */
