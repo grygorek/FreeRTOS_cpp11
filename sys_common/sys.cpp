@@ -18,6 +18,8 @@
 /// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 /// THE SOFTWARE.
 
+#include <cstddef>
+
 extern "C"
 {
   void _exit()
@@ -76,7 +78,7 @@ extern "C"
   int _lseek(int, int, int) { return 0; }
 
   // FreeRTOS malloc/free declarations
-  void *pvPortMalloc(unsigned long long);
+  void *pvPortMalloc(size_t);
   void vPortFree(void *);
 
   // Redirect malloc to FreeRTOS malloc

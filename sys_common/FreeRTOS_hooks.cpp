@@ -19,6 +19,7 @@
 /// THE SOFTWARE.
 
 #include "FreeRTOS.h"
+#include "task.h"
 
 // Idle task
 StaticTask_t g_idleTaskTCB;
@@ -38,7 +39,7 @@ extern "C"
       ;
   }
 
-  void vApplicationStackOverflowHook()
+  void vApplicationStackOverflowHook(TaskHandle_t , char *)
   {
     while (1)
       ;
