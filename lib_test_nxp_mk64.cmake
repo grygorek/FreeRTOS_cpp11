@@ -29,7 +29,7 @@ set(CPU_FLAGS "-mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16")
 file(GLOB LINKER_SCRIPTS  "${CMAKE_SOURCE_DIR}/lib_test_nxp_mk64/*.ld")
 file(COPY ${LINKER_SCRIPTS} DESTINATION ${CMAKE_BINARY_DIR}) 
 
-set(CMAKE_EXE_LINKER_FLAGS "-Wl,--wrap=malloc -Wl,--wrap=free")
+set(CMAKE_EXE_LINKER_FLAGS "-Wl,--wrap=malloc -Wl,--wrap=free -Wl,--gc-sections")
 set(LINKER_SCRIPT "linker.ld")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -T ${LINKER_SCRIPT}")
 
@@ -41,13 +41,14 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -T ${LINKER_SCRIPT}")
 #------------------------
 SET(COMPILE_PART_FLAGS  "${CPU_FLAGS} -Os")
 if(DEBUG)
-  SET(COMPILE_PART_FLAGS  "${CPU_FLAGS} -g3")
+  SET(COMPILE_PART_FLAGS  "${CPU_FLAGS} -O0 -g")
 endif(DEBUG)
 
+# -flto in 10.2 returns: plugin needed to handle lto object and fails to link 
 # lto is broken in gcc 8.2
 # set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 SET(COMPILE_COMMON_FLAGS "${CONFIG_DEFS} ${COMPILE_PART_FLAGS} -Wall -Wextra -Wpedantic -fno-common  \
-                        -fmessage-length=0 -ffunction-sections -fdata-sections")
+                          -fmessage-length=0 -ffunction-sections -fdata-sections -Xlinker -Map=out.map")
 
 # When enabling exceptions, change the linker script to link libstdc++.a instead of libstdc++_nano.a
 SET(CMAKE_C_FLAGS   "${COMPILE_COMMON_FLAGS} -std=c17 -nostdlib -ffreestanding -fno-builtin " CACHE INTERNAL "" FORCE)
