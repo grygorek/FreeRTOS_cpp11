@@ -72,7 +72,7 @@ add_subdirectory(libstdc++_gcc)
 add_executable(${PROJECT_NAME}.elf  
   ${APPLICATION_DIR}/startup_ARMCA9.c
   ${APPLICATION_DIR}/system_ARMCA9.c
-  ${APPLICATION_DIR}/test.c
+  ${APPLICATION_DIR}/main.cpp
   ${APPLICATION_DIR}/ca9_global_timer.c
   ${APPLICATION_DIR}/cmsis/irq_ctrl_gic.c
   ${APPLICATION_DIR}/FreeRTOS_ca9_hooks.c

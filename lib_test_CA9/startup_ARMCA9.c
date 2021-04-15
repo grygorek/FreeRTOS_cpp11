@@ -44,6 +44,9 @@
   Internal References
  *----------------------------------------------------------------------------*/
 
+// Init C++ stuff
+void __libc_init_array(void);
+
 /** \brief Exception and Interrupt Handler Jumptable.
 */
 void Vectors       (void) __attribute__ ((naked, section("RESET")));
@@ -76,6 +79,23 @@ void Vectors(void) {
   "LDR    PC, =FreeRTOS_IRQ_Handler                 \n"
   "LDR    PC, =FIQ_Handler                          \n"
   );
+}
+
+void data_init(unsigned int romstart, unsigned int start, unsigned int len)
+{
+  unsigned int *pulDest = (unsigned int *)start;
+  unsigned int *pulSrc = (unsigned int *)romstart;
+  unsigned int loop;
+  for (loop = 0; loop < len; loop = loop + 4)
+    *pulDest++ = *pulSrc++;
+}
+
+void bss_init(unsigned int start, unsigned int len)
+{
+  unsigned int *pulDest = (unsigned int *)start;
+  unsigned int loop;
+  for (loop = 0; loop < len; loop = loop + 4)
+    *pulDest++ = 0;
 }
 
 /*----------------------------------------------------------------------------
@@ -126,13 +146,26 @@ void Reset_Handler(void) {
   "LDR    SP, =Image$$UND_STACK$$ZI$$Limit         \n"
   "CPS    #0x1F                                    \n"
   "LDR    SP, =Image$$SYS_STACK$$ZI$$Limit         \n"
-
-  // Call SystemInit
-  "BL     SystemInit                               \n"
-
-  // Unmask interrupts
-  "CPSIE  if                                       \n"
   );
+
+  SystemInit();
+
+  // Zero fill the bss segment
+  extern unsigned int __zero_table_start__;
+  unsigned long zeroSectionLen = *(((unsigned*)&__zero_table_start__) + 1);
+  bss_init(__zero_table_start__, zeroSectionLen);
+
+  // Init Rd/Wr data
+  extern unsigned int __copy_table_start__;
+  unsigned long dstData = *(((unsigned*)&__copy_table_start__) + 1);
+  unsigned long cpyDataLen = *(((unsigned*)&__copy_table_start__) + 2);
+  data_init(__copy_table_start__, dstData, cpyDataLen);
+
+  // Call C++ library initialisation
+  __libc_init_array();
+
+  // Enable Interrupts
+  __ASM volatile("CPSIE if");
 
   // fwd declaration - main is the first task
   void main(void *);
