@@ -59,6 +59,8 @@ SET(CMAKE_ASM_FLAGS "-x assembler-with-cpp ${COMPILE_PART_FLAGS}"  CACHE INTERNA
 include_directories( 
   ${APPLICATION_DIR}
   ${APPLICATION_DIR}/cmsis
+  
+  test
 
   FreeRTOS/Source/include 
   FreeRTOS 

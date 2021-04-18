@@ -18,23 +18,58 @@
 /// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 /// THE SOFTWARE.
 
-#include "console.h"
-
 #include <thread>
 #include <chrono>
+#include <mutex>
+#include <condition_variable>
+#include <future>
+#include <cassert>
 
-const char array[] = "Hello World 1!\n";
+#include "console.h"
 
-void main()
+#include "FreeRTOS_time.h"
+
+#include "test_thread.h"
+#include "test_cv.h"
+#include "test_future.h"
+#include "test_once.h"
+#include "test_mutex.h"
+
+// For updates check my github page:
+// https://github.com/grygorek/FreeRTOS_cpp11
+
+int main(void)
 {
-  print("Hello world!\n");
-  print((unsigned)array);
-  printc('\n');
+  using namespace std::chrono_literals;
+  using namespace std::chrono;
 
-  for (;;)
+  print("ARM CA9 - start test\n");
+
+  SetSystemClockTime(time_point<system_clock>(1550178897s));
+
+
+  while (1)
   {
-    print("Hello world!\n");
-    using namespace std::chrono_literals;
-    std::this_thread::sleep_for(500ms);
+    std::this_thread::sleep_until(system_clock::now() + 200ms);
+
+    print("Run...");
+
+    TestMtx();
+
+    DetachAfterThreadEnd();
+    DetachBeforeThreadEnd();
+    JoinAfterThreadEnd();
+    JoinBeforeThreadEnd();
+    DestroyBeforeThreadEnd();
+    DestroyNoStart();
+    StartAndMoveOperator();
+    StartAndMoveConstructor();
+
+    TestConditionVariable();
+
+    TestCallOnce();
+    TestFuture();
+
+    print("OK\n");
   }
 }

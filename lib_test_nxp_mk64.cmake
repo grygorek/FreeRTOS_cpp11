@@ -58,6 +58,8 @@ SET(CMAKE_ASM_FLAGS "-x assembler-with-cpp ${COMPILE_PART_FLAGS}"  CACHE INTERNA
 include_directories( 
   lib_test_nxp_mk64
 
+  test
+
   FreeRTOS/Source/include 
   FreeRTOS 
   FreeRTOS/Source/portable/${COMPILER_NAME}/${CPU_ARCH}
