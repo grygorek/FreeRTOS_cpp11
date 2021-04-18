@@ -29,7 +29,7 @@ void print(unsigned int num)
 
 const char array[] = "Hello World 1!\n";
 
-extern "C" void main(void *)
+void main()
 {
   print("Hello world!\n");
   print((unsigned)array);

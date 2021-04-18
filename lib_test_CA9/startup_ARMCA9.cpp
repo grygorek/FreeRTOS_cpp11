@@ -25,6 +25,14 @@
  * limitations under the License.
  */
 
+/*
+ * Modified by Piotr Grygorczuk (grygorek@gmail.com)
+ * 1. Make this file cpp so we can call public 'main' from cpp file without 
+ *    extern "C".
+ * 2. Start main as a first thread of FreeRTOS.
+ * 3. Add bss init, data section copy and cpp init.
+ */
+
 #include "FreeRTOS.h"
 #include "task.h"
 #include "ARMCA9.h"
@@ -43,6 +51,8 @@
 /*----------------------------------------------------------------------------
   Internal References
  *----------------------------------------------------------------------------*/
+
+extern "C" {
 
 // Init C++ stuff
 void __libc_init_array(void);
@@ -81,6 +91,8 @@ void Vectors(void) {
   );
 }
 
+} // extern "C"
+
 void data_init(unsigned int romstart, unsigned int start, unsigned int len)
 {
   unsigned int *pulDest = (unsigned int *)start;
@@ -98,10 +110,17 @@ void bss_init(unsigned int start, unsigned int len)
     *pulDest++ = 0;
 }
 
+// Forwared declaration
+int main();
+
+void free_rtos_main(void*) {
+  main();
+}
+
 /*----------------------------------------------------------------------------
   Reset Handler called on controller reset
  *----------------------------------------------------------------------------*/
-void Reset_Handler(void) {
+extern "C" void Reset_Handler(void) {
   __ASM volatile(
 
   // Mask interrupts
@@ -152,13 +171,15 @@ void Reset_Handler(void) {
 
   // Zero fill the bss segment
   extern unsigned int __zero_table_start__;
-  unsigned long zeroSectionLen = *(((unsigned*)&__zero_table_start__) + 1);
+  unsigned int *zeroStart = &__zero_table_start__;
+  unsigned long zeroSectionLen = zeroStart[1];
   bss_init(__zero_table_start__, zeroSectionLen);
 
   // Init Rd/Wr data
   extern unsigned int __copy_table_start__;
-  unsigned long dstData = *(((unsigned*)&__copy_table_start__) + 1);
-  unsigned long cpyDataLen = *(((unsigned*)&__copy_table_start__) + 2);
+  unsigned int *copyStart = &__copy_table_start__;
+  unsigned long dstData = copyStart[1];
+  unsigned long cpyDataLen = copyStart[2];
   data_init(__copy_table_start__, dstData, cpyDataLen);
 
   // Call C++ library initialisation
@@ -167,10 +188,7 @@ void Reset_Handler(void) {
   // Enable Interrupts
   __ASM volatile("CPSIE if");
 
-  // fwd declaration - main is the first task
-  void main(void *);
-
-  if (pdPASS != xTaskCreate(main,
+  if (pdPASS != xTaskCreate(free_rtos_main,
                             "main",
                             configMAIN_STACK_SIZE,
                             NULL,

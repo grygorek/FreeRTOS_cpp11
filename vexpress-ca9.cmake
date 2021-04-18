@@ -70,7 +70,7 @@ add_subdirectory(FreeRTOS)
 add_subdirectory(libstdc++_gcc)
 
 add_executable(${PROJECT_NAME}.elf  
-  ${APPLICATION_DIR}/startup_ARMCA9.c
+  ${APPLICATION_DIR}/startup_ARMCA9.cpp
   ${APPLICATION_DIR}/system_ARMCA9.c
   ${APPLICATION_DIR}/main.cpp
   ${APPLICATION_DIR}/ca9_global_timer.c
