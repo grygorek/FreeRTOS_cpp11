@@ -20,21 +20,27 @@
 
 #include "console.h"
 
-#include <thread>
-#include <chrono>
+// UART data register
+volatile unsigned int *const UART0DR = (unsigned int *)0x10009000; // ???
 
-const char array[] = "Hello World 1!\n";
-
-void main()
+void print(const char *s)
 {
-  print("Hello world!\n");
-  print((unsigned)array);
-  printc('\n');
+  while (*s != '\0')
+  { // missing: waiting for the data register to be empty
+    *UART0DR = (unsigned int)(*s);
+    s++;
+  }
+}
 
-  for (;;)
-  {
-    print("Hello world!\n");
-    using namespace std::chrono_literals;
-    std::this_thread::sleep_for(500ms);
+void print(unsigned int num)
+{
+  static const char tab[] = "0123456789ABCDEF";
+  for (int i = 8; i >= 0; i--)
+  { // missing: waiting for the data register to be empty
+    unsigned char c = (num >> (i * 4)) & 0xF;
+    if (c < sizeof(tab) - 1)
+      *UART0DR = tab[c];
+    else
+      *UART0DR = '?';
   }
 }

@@ -18,23 +18,13 @@
 /// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 /// THE SOFTWARE.
 
-#include "console.h"
+#ifndef CONSOLE_PRINT_H
+#define CONSOLE_PRINT_H
 
-#include <thread>
-#include <chrono>
+extern volatile unsigned int *const UART0DR;
+static inline void printc(char c) { *UART0DR = c; }
 
-const char array[] = "Hello World 1!\n";
+void print(const char *s);
+void print(unsigned int num);
 
-void main()
-{
-  print("Hello world!\n");
-  print((unsigned)array);
-  printc('\n');
-
-  for (;;)
-  {
-    print("Hello world!\n");
-    using namespace std::chrono_literals;
-    std::this_thread::sleep_for(500ms);
-  }
-}
+#endif //CONSOLE_PRINT_H
