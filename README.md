@@ -15,7 +15,7 @@ I have not tested all the features. I know that `thread_local` does not work.
 It will compile but will not create thread unique storage.
 
 This implementation is for GNU C Compiler (GCC) only. Tested with:
-  * GCC 7.2 and 8.2 for ARM 32bit (cmake generates Eclipse project)
+  * GCC 8.2 and 10.2 for ARM 32bit (cmake generates Eclipse project)
   * FreeRTOS 10.1.1
   * Windows 10
   * NXP MCUXpresso v10.3.0 (ARM CM4 & CM7)
@@ -38,11 +38,11 @@ $ cmake ../FreeRTOS_cpp11 -G "Eclipse CDT4 - Unix Makefiles" -Dk64frdmevk=1
 $ cmake --build .
 ```
 
-[Another example](qemu_lm3s811/README.md) is TI LM3S811 and is used to run the program in QEMU instead 
+[Another example](lib_test_CA9/README.md) is `ARM Versatile Express Cortex-A9` and is used to run the program in QEMU instead 
 of the physical hardware. It can be build from the command line:
 
 ```console
-$ cmake ../FreeRTOS_cpp11 -G "Eclipse CDT4 - Unix Makefiles" -Dlm3s811=1
+$ cmake ../FreeRTOS_cpp11 -G "Eclipse CDT4 - Unix Makefiles" -Darmca9=1
 $ cmake --build .
 ```
 

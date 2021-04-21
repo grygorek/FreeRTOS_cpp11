@@ -20,13 +20,15 @@
 
 cmake_minimum_required(VERSION 3.0)
 
-# ARM Cortex-M4F settings
+# ARM Cortex-A9 settings
 ###########################
-message(STATUS "Building: K64FRDM EVK board")
-set(CPU_ARCH "ARM_CM4F")
-set(CPU_FLAGS "-mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16")
- 
-file(GLOB LINKER_SCRIPTS  "${CMAKE_SOURCE_DIR}/lib_test_nxp_mk64/*.ld")
+message(STATUS "Building: ARM vexpress-a9")
+set(CPU_ARCH "ARM_CA9")
+set(CPU_FLAGS "-mcpu=cortex-a9 -mfloat-abi=hard -mfpu=auto")
+
+set(APPLICATION_DIR "lib_test_CA9")
+
+file(GLOB LINKER_SCRIPTS  "${CMAKE_SOURCE_DIR}/${APPLICATION_DIR}/*.ld")
 file(COPY ${LINKER_SCRIPTS} DESTINATION ${CMAKE_BINARY_DIR}) 
 
 set(CMAKE_EXE_LINKER_FLAGS "-Wl,--wrap=malloc -Wl,--wrap=free -Wl,--gc-sections")
@@ -41,23 +43,23 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -T ${LINKER_SCRIPT}")
 #------------------------
 SET(COMPILE_PART_FLAGS  "${CPU_FLAGS} -Os")
 if(DEBUG)
-  SET(COMPILE_PART_FLAGS  "${CPU_FLAGS} -O0 -g")
+  SET(COMPILE_PART_FLAGS  "${CPU_FLAGS} -g3")
 endif(DEBUG)
 
-# -flto in 10.2 returns: plugin needed to handle lto object and fails to link 
 # lto is broken in gcc 8.2
 # set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 SET(COMPILE_COMMON_FLAGS "${CONFIG_DEFS} ${COMPILE_PART_FLAGS} -Wall -Wextra -Wpedantic -fno-common  \
-                          -fmessage-length=0 -ffunction-sections -fdata-sections -Xlinker -Map=out.map")
+                        -fmessage-length=0 -ffunction-sections -fdata-sections")
 
 # When enabling exceptions, change the linker script to link libstdc++.a instead of libstdc++_nano.a
-SET(CMAKE_C_FLAGS   "${COMPILE_COMMON_FLAGS} -std=c17 -nostdlib -ffreestanding -fno-builtin " CACHE INTERNAL "" FORCE)
-SET(CMAKE_CXX_FLAGS "${COMPILE_COMMON_FLAGS} -std=c++2a -nostdlib -ffreestanding -fno-builtin -fno-exceptions -fno-rtti -fno-unwind-tables" CACHE INTERNAL "" FORCE)
+SET(CMAKE_C_FLAGS   "${COMPILE_COMMON_FLAGS} -std=c17  -nostdlib -ffreestanding -fno-builtin " CACHE INTERNAL "" FORCE)
+SET(CMAKE_CXX_FLAGS "${COMPILE_COMMON_FLAGS} -std=c++17 -nostdlib -ffreestanding -fno-builtin -fno-exceptions -fno-rtti -fno-unwind-tables" CACHE INTERNAL "" FORCE)
 SET(CMAKE_ASM_FLAGS "-x assembler-with-cpp ${COMPILE_PART_FLAGS}"  CACHE INTERNAL "" FORCE)
 
 include_directories( 
-  lib_test_nxp_mk64
-
+  ${APPLICATION_DIR}
+  ${APPLICATION_DIR}/cmsis
+  
   test
 
   FreeRTOS/Source/include 
@@ -70,8 +72,13 @@ add_subdirectory(FreeRTOS)
 add_subdirectory(libstdc++_gcc)
 
 add_executable(${PROJECT_NAME}.elf  
-  lib_test_nxp_mk64/startup_mk64f12.cpp
-  lib_test_nxp_mk64/main.cpp
+  ${APPLICATION_DIR}/startup_ARMCA9.cpp
+  ${APPLICATION_DIR}/system_ARMCA9.c
+  ${APPLICATION_DIR}/console.cpp
+  ${APPLICATION_DIR}/ca9_global_timer.c
+  ${APPLICATION_DIR}/cmsis/irq_ctrl_gic.c
+  ${APPLICATION_DIR}/FreeRTOS_ca9_hooks.c
+  ${APPLICATION_DIR}/main.cpp
 
   sys_common/FreeRTOS_hooks.cpp
   sys_common/FreeRTOS_memory.cpp
