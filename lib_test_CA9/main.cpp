@@ -27,7 +27,7 @@
 
 #include "console.h"
 
-#include "FreeRTOS_time.h"
+#include "freertos_time.h"
 
 #include "test_thread.h"
 #include "test_cv.h"
