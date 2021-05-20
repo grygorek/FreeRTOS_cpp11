@@ -18,11 +18,12 @@
 /// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 /// THE SOFTWARE.
 
-#ifndef __THREAD_TEST_H__
-#define __THREAD_TEST_H__
+#ifndef THREAD_TEST_H
+#define THREAD_TEST_H
 
 #include <thread>
 #include <chrono>
+#include <stop_token>
 
 inline void DetachBeforeThreadEnd()
 {
@@ -106,5 +107,20 @@ inline void StartAndMoveConstructor()
   //t.join(); this will terminate the program
   tt.join();
 }
+
+#if __cplusplus > 201703L
+inline void TestJThread()
+{
+  using namespace std::chrono_literals;
+
+  std::jthread t{ [](std::stop_token stop){
+    while( !stop.stop_requested() )
+      std::this_thread::sleep_for(1ms);
+  }};
+
+  std::this_thread::sleep_for(20ms);
+  t.request_stop();
+}
+#endif
 
 #endif //__THREAD_TEST_H__
