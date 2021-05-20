@@ -64,6 +64,9 @@ int main(void)
     DestroyNoStart();
     StartAndMoveOperator();
     StartAndMoveConstructor();
+#if __cplusplus > 201703L
+    TestJThread();
+#endif
 
     TestConditionVariable();
 
