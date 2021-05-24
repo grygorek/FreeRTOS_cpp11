@@ -22,14 +22,22 @@ cmake_minimum_required(VERSION 3.0)
 
 set(frtos_port Source/portable/GCC/${CPU_ARCH})
 
+if(CPU_ARCH STREQUAL "RISC-V")  
+  # FreeRTOS port for RISC-v processers have an additional include file
+  set(FREERTOS_PORT_INC ${frtos_port}/chip_specific_extensions/RV32I_CLINT_no_extensions)
+elseif()
+  set(FREERTOS_PORT_INC "")
+endif()  
+
 include_directories(
   cpp11_gcc 
   Source/include
   ${frtos_port}
+  ${FREERTOS_PORT_INC}
 )
 
-if(CPU_ARCH STREQUAL "ARM_CA9")  
-  # FreeRTOS port for Cortex A processers has an additional asm file
+if(CPU_ARCH STREQUAL "ARM_CA9" OR CPU_ARCH STREQUAL "RISC-V")  
+  # FreeRTOS port for Cortex A and RISC-v processers have an additional asm file
   set(FREERTOS_PORT_ASM ${frtos_port}/portASM.S)
 elseif()
   set(FREERTOS_PORT_ASM "")

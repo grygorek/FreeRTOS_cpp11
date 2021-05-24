@@ -33,7 +33,12 @@ if(LINUX)
   SET(COMPILER_PATH "")
   SET(COMPILER_POSTFIX "")
 endif(LINUX)
-SET(COMPILER_PREFIX arm-none-eabi)
+
+if(riscv)
+  SET(COMPILER_PREFIX riscv-none-embed)
+else(riscv)
+  SET(COMPILER_PREFIX arm-none-eabi)
+endif()
 
 SET(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
 SET(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "")
