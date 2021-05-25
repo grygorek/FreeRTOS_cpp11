@@ -20,7 +20,7 @@
 
 cmake_minimum_required(VERSION 3.0)
 
-# ARM Cortex-A9 settings
+# RISC-V settings
 ###########################
 message(STATUS "Building: RISC-V Qemu virt")
 set(CPU_ARCH "RISC-V")
