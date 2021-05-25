@@ -1,0 +1,66 @@
+name: RISC-V none GCC 10.1.0
+
+on: [push]
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+
+jobs:
+  Build-All-RISCV-none-GCC10:
+    # The CMake configure and build commands are platform agnostic and should work equally
+    # well on Windows or Mac.  You can convert this to a matrix build if you need
+    # cross-platform coverage.
+    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install RISC-V none GCC 10.1.0
+      shell: bash
+      run: | 
+       wget https://github.com/xpack-dev-tools/riscv-none-embed-gcc-xpack/releases/download/v10.1.0-1.1/xpack-riscv-none-embed-gcc-10.1.0-1.1-linux-x64.tar.gz
+       echo "-----Unpack gcc tarball----"
+       tar -xf xpack-*
+       echo "Done"
+       echo ""
+       ls -la
+       
+       echo "${{github.workspace}}/xpack-riscv-none-embed-gcc-10.1.0-1.1/bin/" >> $GITHUB_PATH
+       echo "${{github.workspace}}/xpack-riscv-none-embed-gcc-10.1.0-1.1/riscv-none-embed/include/" >> $GITHUB_PATH
+       echo "${{github.workspace}}/xpack-riscv-none-embed-gcc-10.1.0-1.1/riscv-none-embed/include/c++/10.1.0/" >> $GITHUB_PATH
+       echo "${{github.workspace}}/xpack-riscv-none-embed-gcc-10.1.0-1.1/riscv-none-embed/include/c++/10.1.0/riscv-none-embed" >> $GITHUB_PATH
+       echo "${{github.workspace}}/xpack-riscv-none-embed-gcc-10.1.0-1.1/riscv-none-embed/include/c++/10.1.0/backward" >> $GITHUB_PATH
+       echo "${{github.workspace}}/xpack-riscv-none-embed-gcc-10.1.0-1.1/lib/gcc/riscv-none-embed/10.1.0/include" >> $GITHUB_PATH
+       echo "${{github.workspace}}/xpack-riscv-none-embed-gcc-10.1.0-1.1/lib/gcc/riscv-none-embed/10.1.0/include-fixed" >> $GITHUB_PATH
+       echo "${{github.workspace}}/xpack-riscv-none-embed-gcc-10.1.0-1.1/riscv-none-embed/lib/rv32im/ilp32/" >> $GITHUB_PATH
+
+       echo "$PATH"
+
+    #
+    #  RISC-V
+    #
+
+    - name: Create Build Environment RISC-V
+      # Some projects don't allow in-source building, so create a separate build directory
+      # We'll use this as our working directory for all subsequent commands
+      run: cmake -E make_directory ${{github.workspace}}/build_riscv
+
+    - name: Configure CMake
+      # Use a bash shell so we can use the same syntax for environment variable
+      # access regardless of the host operating system
+      shell: bash
+      working-directory: ${{github.workspace}}/build_riscv
+      # Note the current convention is to use the -S and -B options here to specify source 
+      # and build directories, but this is only available with CMake 3.13 and higher.  
+      # The CMake binaries on the Github Actions machines are (as of this writing) 3.12
+      run: |
+       riscv-none-embed-gcc --version
+       cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -Driscv=1
+
+    - name: Build RISC-V
+      working-directory: ${{github.workspace}}/build_riscv
+      shell: bash
+      # Execute the build.  You can specify a specific target with "--target <NAME>"
+      run: cmake --build . --config $BUILD_TYPE -j
