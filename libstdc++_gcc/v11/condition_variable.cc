@@ -1,5 +1,3 @@
-// This file has been modified by Piotr Grygorczuk on 17 Feb 2021
-
 // condition_variable -*- C++ -*-
 
 // Copyright (C) 2008-2021 Free Software Foundation, Inc.
@@ -31,44 +29,40 @@
 
 namespace std _GLIBCXX_VISIBILITY(default)
 {
-  _GLIBCXX_BEGIN_NAMESPACE_VERSION
+_GLIBCXX_BEGIN_NAMESPACE_VERSION
 
-  // MODIFICATION BEGIN
+  condition_variable::condition_variable() noexcept = default;
 
-  // condition_variable::condition_variable() noexcept = default;
+  condition_variable::~condition_variable() noexcept = default;
 
-  // condition_variable::~condition_variable() noexcept = default;
+  void
+  condition_variable::wait(unique_lock<mutex>& __lock) noexcept
+  {
+    _M_cond.wait(*__lock.mutex());
+  }
 
-  // void
-  //     condition_variable::wait(unique_lock<mutex> & __lock) noexcept
-  // {
-  //   _M_cond.wait(*__lock.mutex());
-  // }
+  void
+  condition_variable::notify_one() noexcept
+  {
+    _M_cond.notify_one();
+  }
 
-  // void
-  // condition_variable::notify_one() noexcept
-  // {
-  //   _M_cond.notify_one();
-  // }
-
-  // void
-  // condition_variable::notify_all() noexcept
-  // {
-  //   _M_cond.notify_all();
-  // }
-
-  // MODIFICATION END
+  void
+  condition_variable::notify_all() noexcept
+  {
+    _M_cond.notify_all();
+  }
 
   extern void
-  __at_thread_exit(__at_thread_exit_elt *);
+  __at_thread_exit(__at_thread_exit_elt*);
 
   namespace
   {
     __gthread_key_t key;
 
-    void run(void *p)
+    void run(void* p)
     {
-      auto elt = (__at_thread_exit_elt *)p;
+      auto elt = (__at_thread_exit_elt*)p;
       while (elt)
       {
         auto next = elt->_M_next;
@@ -79,15 +73,15 @@ namespace std _GLIBCXX_VISIBILITY(default)
 
     void run()
     {
-      auto elt = (__at_thread_exit_elt *)__gthread_getspecific(key);
+      auto elt = (__at_thread_exit_elt*)__gthread_getspecific(key);
       __gthread_setspecific(key, nullptr);
       run(elt);
     }
 
     struct notifier final : __at_thread_exit_elt
     {
-      notifier(condition_variable &cv, unique_lock<mutex> &l)
-          : cv(&cv), mx(l.release())
+      notifier(condition_variable& cv, unique_lock<mutex>& l)
+      : cv(&cv), mx(l.release())
       {
         _M_cb = &notifier::run;
         __at_thread_exit(this);
@@ -99,42 +93,41 @@ namespace std _GLIBCXX_VISIBILITY(default)
         cv->notify_all();
       }
 
-      condition_variable *cv;
-      mutex *mx;
+      condition_variable* cv;
+      mutex* mx;
 
-      static void run(void *p) { delete static_cast<notifier *>(p); }
+      static void run(void* p) { delete static_cast<notifier*>(p); }
     };
 
-    void key_init()
-    {
-      struct key_s
-      {
-        key_s() { __gthread_key_create(&key, run); }
-        ~key_s() { __gthread_key_delete(key); }
+
+    void key_init() {
+      struct key_s {
+        key_s() { __gthread_key_create (&key, run); }
+        ~key_s() { __gthread_key_delete (key); }
       };
       static key_s ks;
       // Also make sure the callbacks are run by std::exit.
-      std::atexit(run);
+      std::atexit (run);
     }
   }
 
   void
-      __at_thread_exit(__at_thread_exit_elt * elt)
+  __at_thread_exit(__at_thread_exit_elt* elt)
   {
     static __gthread_once_t once = __GTHREAD_ONCE_INIT;
-    __gthread_once(&once, key_init);
+    __gthread_once (&once, key_init);
 
-    elt->_M_next = (__at_thread_exit_elt *)__gthread_getspecific(key);
+    elt->_M_next = (__at_thread_exit_elt*)__gthread_getspecific(key);
     __gthread_setspecific(key, elt);
   }
 
   void
-  notify_all_at_thread_exit(condition_variable & cv, unique_lock<mutex> l)
+  notify_all_at_thread_exit(condition_variable& cv, unique_lock<mutex> l)
   {
-    (void)new notifier{cv, l};
+    (void) new notifier{cv, l};
   }
 
-  _GLIBCXX_END_NAMESPACE_VERSION
+_GLIBCXX_END_NAMESPACE_VERSION
 } // namespace
 
 #endif // _GLIBCXX_HAS_GTHREADS

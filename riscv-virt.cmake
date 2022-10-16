@@ -31,7 +31,7 @@ set(APPLICATION_DIR "lib_test_RISC-V")
 file(GLOB LINKER_SCRIPTS  "${CMAKE_SOURCE_DIR}/${APPLICATION_DIR}/*.ld")
 file(COPY ${LINKER_SCRIPTS} DESTINATION ${CMAKE_BINARY_DIR}) 
 
-set(CMAKE_EXE_LINKER_FLAGS "-Wl,--wrap=malloc -Wl,--wrap=free -Wl,--gc-sections -Wl,--defsym=__stack_size=300")
+set(CMAKE_EXE_LINKER_FLAGS "-Wl,--wrap=malloc -Wl,--wrap=free -Wl,--wrap=aligned_alloc -Wl,--wrap=_malloc_r -Wl,--wrap=_memalign_r -Wl,--gc-sections -Wl,--defsym=__stack_size=300")
 set(LINKER_SCRIPT "linker.ld")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -T ${LINKER_SCRIPT}")
 
@@ -67,8 +67,15 @@ include_directories(
   FreeRTOS/cpp11_gcc
 )
 
+# Select the right directory for the compiler version
+if(CMAKE_CXX_COMPILER_VERSION LESS 11)
+  SET(GCC_VER_DIR "v10")
+else(CMAKE_CXX_COMPILER_VERSION LESS 11)
+  SET(GCC_VER_DIR "v11")
+endif(CMAKE_CXX_COMPILER_VERSION LESS 11)
+
 add_subdirectory(FreeRTOS)
-add_subdirectory(libstdc++_gcc)
+add_subdirectory(libstdc++_gcc/${GCC_VER_DIR})
 
 add_executable(${PROJECT_NAME}.elf
   ${APPLICATION_DIR}/startup_riscv.S

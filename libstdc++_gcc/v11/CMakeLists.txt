@@ -1,4 +1,4 @@
-# Copyright 2021 Piotr Grygorczuk <grygorek@gmail.com>
+# Copyright 2022 Piotr Grygorczuk <grygorek@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,44 +20,9 @@
 
 cmake_minimum_required(VERSION 3.0)
 
-set(frtos_port Source/portable/GCC/${CPU_ARCH})
-
-if(CPU_ARCH STREQUAL "RISC-V")  
-  # FreeRTOS port for RISC-v processers have an additional include file
-  set(FREERTOS_PORT_INC ${frtos_port}/chip_specific_extensions/RV32I_CLINT_no_extensions)
-elseif()
-  set(FREERTOS_PORT_INC "")
-endif()  
-
-include_directories(
-  cpp11_gcc 
-  Source/include
-  ${frtos_port}
-  ${FREERTOS_PORT_INC}
+add_library(std++_freertos STATIC
+  future.cc
+  mutex.cc
+  condition_variable.cc
+  libatomic.c
 )
-
-if(CPU_ARCH STREQUAL "ARM_CA9" OR CPU_ARCH STREQUAL "RISC-V")  
-  # FreeRTOS port for Cortex A and RISC-v processers have an additional asm file
-  set(FREERTOS_PORT_ASM ${frtos_port}/portASM.S)
-elseif()
-  set(FREERTOS_PORT_ASM "")
-endif()  
-
-add_library(freeRTOS STATIC
-  cpp11_gcc/freertos_time.cpp
-  cpp11_gcc/gthr_key.cpp
-  cpp11_gcc/thread.cpp
-
-  Source/croutine.c
-  Source/event_groups.c
-  Source/list.c
-  Source/queue.c
-  Source/stream_buffer.c
-  Source/tasks.c
-  Source/timers.c
-
-  Source/portable/MemMang/heap_4.c
-  ${frtos_port}/port.c
-  ${FREERTOS_PORT_ASM}
-)
-

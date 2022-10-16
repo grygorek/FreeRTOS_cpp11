@@ -18,70 +18,28 @@
 /// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 /// THE SOFTWARE.
 
-#include <thread>
+#ifndef ATOMIC_WAIT_TEST_H__
+#define ATOMIC_WAIT_TEST_H__
+
 #include <chrono>
-#include <mutex>
-#include <condition_variable>
-#include <future>
+#include <thread>
 #include <cassert>
+#include <atomic>
 
-#include "console.h"
-
-#include "freertos_time.h"
-
-#include "test_thread.h"
-#include "test_cv.h"
-#include "test_future.h"
-#include "test_once.h"
-#include "test_mutex.h"
-
-#if __cplusplus > 201907L
-#include "test_semaphore_latch_barrier.h"
-#include "test_atomic.h"
-#endif
-
-// For updates check my github page:
-// https://github.com/grygorek/FreeRTOS_cpp11
-
-int main(void)
+inline void TestAtomicWait()
 {
   using namespace std::chrono_literals;
-  using namespace std::chrono;
+  std::atomic<int> at = 6;
+  std::jthread t{[&]
+                 {
+                   std::this_thread::sleep_for(50ms);
+                   at = 5;
+                   at.notify_one();
+                 }};
 
-  print("ARM CA9 - start test\n");
+  at.wait(6);
 
-  SetSystemClockTime(time_point<system_clock>(1550178897s));
-
-  while (1)
-  {
-    std::this_thread::sleep_until(system_clock::now() + 200ms);
-
-    print("Run...");
-
-    TestMtx();
-
-    DetachAfterThreadEnd();
-    DetachBeforeThreadEnd();
-    JoinAfterThreadEnd();
-    JoinBeforeThreadEnd();
-    DestroyBeforeThreadEnd();
-    DestroyNoStart();
-    StartAndMoveOperator();
-    StartAndMoveConstructor();
-
-#if __cplusplus > 201907L
-    TestJThread();
-    TestSemaphore();
-    TestLatch();
-    TestBarrier();
-    TestAtomicWait();
-#endif
-
-    TestConditionVariable();
-
-    TestCallOnce();
-    TestFuture();
-
-    print("OK\n");
-  }
+  assert(at == 5);
 }
+
+#endif // ATOMIC_WAIT_TEST_H__

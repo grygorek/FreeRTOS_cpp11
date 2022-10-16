@@ -19,6 +19,7 @@
 /// THE SOFTWARE.
 
 #include <cstddef>
+#include <stdint.h>
 
 extern "C"
 {
@@ -82,14 +83,50 @@ extern "C"
   void vPortFree(void *);
 
   // Redirect malloc to FreeRTOS malloc
-  void *__wrap_malloc(unsigned long long size)
+  void *__wrap_malloc(size_t size)
   {
-    return pvPortMalloc(size);
+    // This is a not aligned version of malloc but still need to match
+    // the format expected by free.
+
+    // Allocate one more space to store an address.
+    uintptr_t *p = (uintptr_t *)pvPortMalloc(size + sizeof(void *));
+    if (!p)
+      return nullptr;
+
+    // Store real address that will be used by free().
+    ((void **)p)[0] = p;
+
+    return p + 1;
+  }
+
+  void *__wrap__malloc_r(void *, size_t size)
+  {
+    return __wrap_malloc(size);
+  }
+
+  // Allocate aligned memory.
+  void *__wrap__memalign_r(void *, size_t al, size_t size)
+  {
+    if (al < sizeof(void *))
+      al = sizeof(void *);
+
+    void *p = pvPortMalloc(size + al);
+    if (!p)
+      return nullptr;
+
+    // Requirement: Alignment 'al' must be power of 2.
+    void *aligned_ptr = (void *)(((uintptr_t)p & -al) + al);
+
+    // Store the real address that will be used by free().
+    ((void **)aligned_ptr)[-1] = p;
+
+    return aligned_ptr;
   }
 
   // Redirect free to FreeRTOS free
   void __wrap_free(void *p)
   {
-    vPortFree(p);
+    void *real_ptr = ((void **)p)[-1];
+    vPortFree(real_ptr);
   }
 }
