@@ -10,8 +10,8 @@ I have tested with this version
 
 ```console
 $ qemu-system-arm --version
-QEMU emulator version 5.0.0 (v5.0.0-11810-g8846fa22bb-dirty)
-Copyright (c) 2003-2020 Fabrice Bellard and the QEMU Project developers
+QEMU emulator version 6.1.0 (v6.1.0-11882-g7deea770bf-dirty)
+Copyright (c) 2003-2021 Fabrice Bellard and the QEMU Project developers
 ```
 
 ## Platform Decision

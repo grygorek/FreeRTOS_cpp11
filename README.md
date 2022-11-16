@@ -10,17 +10,18 @@ in FreeRTOS. That is:
   * Time - std::chrono, std::sleep_for, etc.
   * Futures - std::assync, std::promise, std::future, etc.
   * std::notify_all_at_thread_exit
+  * C++20 semaphores, latches, barriers and atomic wait & notify
 
 I have not tested all the features. I know that `thread_local` does not work.
 It will compile but will not create thread unique storage.
 
 This implementation is for GNU C Compiler (GCC) only. Tested with:
-  * GCC 8.2 and 10.2 for ARM 32bit (cmake generates Eclipse project)
-  * FreeRTOS 10.1.1
+  * GCC 11.3 and 10.2 for ARM 32bit (cmake generates Eclipse project)
+  * FreeRTOS 10.4.3
   * Windows 10
-  * NXP MCUXpresso v10.3.0 (ARM CM4 & CM7)
+  * Qemu 6.1.0
 
-Although I have not tried any platforms other than ARM, I believe it should work.
+Although I have not tried any platforms other than ARM and RISCV, I believe it should work.
 The dependency is on FreeRTOS only. If FreeRTOS runs on your target then I believe
 this library will too.
 
@@ -30,7 +31,7 @@ STL directly. STL will use the provided library under the hood. Saying that,
 none of the files should be included in your application's source files - 
 except one (`freertos_time.h` to set system time).
 
-Attached is an example cmake project. The target is for NXP K64F Cortex M4
+Attached are example cmake projects. One target is for NXP K64F Cortex M4
 microcontroller. It can be built from the command line:
 
 ```console
@@ -119,7 +120,6 @@ The following definitions should also be placed in `FreeRTOSConfig.h` file:
 And then the following files need to be included in the project:
 
 ```
-condition_variable.cpp  --> Definitions required by std::condition_variable
 condition_variable.h    --> Helper class to implement std::condition_variable
 critical_section.h      --> Helper class wrap FreeRTOS citical section
                             (it is for the internal use only)
@@ -134,6 +134,9 @@ bits/gthr-default.h     --> FreeRTOS GCC Hook (thread and mutex, see below)
 
 future.cc               --> Taken as is from GCC code
 mutex.cc                --> Taken as is from GCC code
+condition_variable.cc   --> Taken as is from GCC code
+libatomic.c             --> Since GCC11 atomic is not included in GCC build
+                            for certain platforms. Need to provide it.
 ```
 
 Simple example application can be like that:
@@ -402,31 +405,17 @@ typedef free_rtos_std::cv_task_list __gthread_cond_t;
 Now, class `std::condition_variable` can see the `cv_task_list` class as a native
 handler. Great! Time for the missing functions.
 
-The implementation is in `condition_variable.cpp` file. The functions are: 
-* constructor
-* destructor
-* notify_all
-* notify_one
-* and wait
+The implementation is in `condition_variable.cc` file. This file is part of GCC
+repository and is an interface to a native implementation in `gthr-default.h` file.
 
-Constructor has nothing to do so, keep a default implementation. Destructor
-will throw a system error if there are waiting threads. The cppreference website
-says that it is not safe to call a destructor in a such case. For that reason
-the condition is tested.
+Functions that need to be implemented are:
+* __gthread_cond_wait
+* __gthread_cond_timedwait
+* __gthread_cond_signal
+* __gthread_cond_broadcast
+* __gthread_cond_destroy
 
-```
-namespace std{
-
-condition_variable::condition_variable() = default;
-
-condition_variable::~condition_variable()
-{ // It is only safe to invoke the destructor if all threads have been notified.
-  if (!_M_cond.empty())
-    std::__throw_system_error(117); // POSIX error: structure needs cleaning
-}
-...
-}
-```
+The `__gthread_cond_destroy` has nothing to do and is empty.
 
 The `wait` function is the one which keeps the secret of a condition variable 
 (snippet below). It saves a handle of the current thread to the queue while the
@@ -447,7 +436,7 @@ It is worth making a comment that when the second unlock returns,
 context can be switched. It is possible that a different thread calls 
 notify_one/all in that time. In that case the task that has been pushed to the
 queue will be removed from that queue before even starting being suspended.
-This is correct behaviour. Accordingly to FreeRTOS documentation a call to
+This is correct behaviour. Accordingly to the FreeRTOS documentation a call to
 `ulTaskNotifyTake` will not suspend the task in that case. 
 
 Regardles whether the task got suspended or not, when `ulTaskNotifyTake` returns,
@@ -457,56 +446,57 @@ the condition must be taken again. However, it could be that some other thread
 got access to the condition in the meantime. So, the immediate lock can lock
 the thread again. 
 
-The remaining two functions `notify_all` and `notify_one` are almost the same.
+Next two functions `broadcast` and `signal` are almost the same.
 Both lock the access to the queue, remove a task from the queue and wake that
-task. Difference is that `notify_one` wakes only one task and the `notify_all`
+task. Difference is that `signal` wakes only one task and the `broadcast`
 wakes all of them in a loop.
 
 ```
-namespace std{
 
-...
+static inline int __gthread_cond_wait(__gthread_cond_t *cond, __gthread_mutex_t *mutex)
+{
+  // Note: 'mutex' is taken before entering this function
 
-void condition_variable::wait(std::unique_lock<std::mutex> &m)
-{ // pre-condition: m is taken!!
-  _M_cond.lock();
-  _M_cond.push(__gthread_t::native_task_handle());
-  _M_cond.unlock();
+  cond->lock();
+  cond->push(__gthread_t::native_task_handle());
+  cond->unlock();
 
-  m.unlock();
+  __gthread_mutex_unlock(mutex);
   ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-  m.lock();
+  __gthread_mutex_lock(mutex); // lock and return
+  return 0;
 }
 
-void condition_variable::notify_one()
+static inline int __gthread_cond_signal(__gthread_cond_t *cond)
 {
-  _M_cond.lock();
-  if (!_M_cond.empty())
+  cond->lock();
+  if (!cond->empty())
   {
-    auto t = _M_cond.front();
-    _M_cond.pop();
+    auto t = cond->front();
+    cond->pop();
     xTaskNotifyGive(t);
   }
-  _M_cond.unlock();
+  cond->unlock();
+  return 0;
 }
 
-void condition_variable::notify_all()
+static inline int __gthread_cond_broadcast(__gthread_cond_t *cond)
 {
-  _M_cond.lock();
-  while (!_M_cond.empty())
+  cond->lock();
+  while (!cond->empty())
   {
-    auto t = _M_cond.front();
-    _M_cond.pop();
+    auto t = cond->front();
+    cond->pop();
     xTaskNotifyGive(t);
   }
-  _M_cond.unlock();
+  cond->unlock();
+  return 0;
 }
-
-} // namespace std
 
 ```
 
-
+The `__gthread_cond_timedwait` has the same functionality as the `wait` version
+with a difference that a timeout in ms will be passed to the `ulTaskNotifyTake`.
 
 ## Thread
 
@@ -1019,22 +1009,6 @@ gthr_freertos &gthr_freertos::operator=(gthr_freertos &&r)
 
 I have to admit I have cheated to provide support for futures. Simply, 
 I just included files from GCC repository. That is `mutex.cc` and `future.cc`. 
-Plus I copied a piece of code at the end of `condition_variable.cpp` from
-`condition_variable.cc` file. 
-The reason for adding it at the end of file is that `future.cc` is explicitly 
-referencing `condition_variable.cc`:
-
-```
-inside of future.cc:
-
-  // defined in src/c++11/condition_variable.cc
-  extern void
-  __at_thread_exit(__at_thread_exit_elt* elt);
-```
-
-Although, the extentions are diffrent (`cc` vs `cpp`) I did not want to create
-a separate file, modify the comment or rename the existing file. I think this is
-a good compromise.
 
 Copying files is not enough. Few extra functions must be implemented to make 
 futures working.
