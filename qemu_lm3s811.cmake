@@ -29,7 +29,7 @@ set(CPU_FLAGS "-mcpu=cortex-m3 -mthumb")
 file(GLOB LINKER_SCRIPTS  "${CMAKE_SOURCE_DIR}/qemu_lm3s811/*.ld")
 file(COPY ${LINKER_SCRIPTS} DESTINATION ${CMAKE_BINARY_DIR}) 
 
-set(CMAKE_EXE_LINKER_FLAGS "-Wl,--wrap=malloc -Wl,--wrap=free  -Wl,--gc-sections")
+set(CMAKE_EXE_LINKER_FLAGS "-Wl,--wrap=malloc -Wl,--wrap=free -Wl,--wrap=aligned_alloc -Wl,--wrap=_malloc_r -Wl,--wrap=_memalign_r -Wl,--gc-sections")
 set(LINKER_SCRIPT "linker.ld")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -T ${LINKER_SCRIPT} -Xlinker -Map=output.map")
 
@@ -69,8 +69,15 @@ include_directories(
   FreeRTOS/cpp11_gcc
 )
 
+# Select the right directory for the compiler version
+if(CMAKE_CXX_COMPILER_VERSION LESS 11)
+  SET(GCC_VER_DIR "v10")
+else(CMAKE_CXX_COMPILER_VERSION LESS 11)
+  SET(GCC_VER_DIR "v11")
+endif(CMAKE_CXX_COMPILER_VERSION LESS 11)
+
 add_subdirectory(FreeRTOS)
-add_subdirectory(libstdc++_gcc)
+add_subdirectory(libstdc++_gcc/${GCC_VER_DIR})
 
 add_executable(${PROJECT_NAME}.elf  
   sys_common/FreeRTOS_hooks.cpp

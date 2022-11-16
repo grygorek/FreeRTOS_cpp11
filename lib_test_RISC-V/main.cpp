@@ -1,4 +1,4 @@
-/// Copyright 2021 Piotr Grygorczuk <grygorek@gmail.com>
+/// Copyright 2022 Piotr Grygorczuk <grygorek@gmail.com>
 ///
 /// Permission is hereby granted, free of charge, to any person obtaining a copy
 /// of this software and associated documentation files (the "Software"), to deal
@@ -35,6 +35,11 @@
 #include "test_once.h"
 #include "test_mutex.h"
 
+#if __cplusplus > 201907L
+#include "test_semaphore_latch_barrier.h"
+#include "test_atomic.h"
+#endif
+
 // For updates check my github page:
 // https://github.com/grygorek/FreeRTOS_cpp11
 
@@ -63,8 +68,13 @@ int main(void)
     DestroyNoStart();
     StartAndMoveOperator();
     StartAndMoveConstructor();
-#if __cplusplus > 201703L
+
+#if __cplusplus > 201907L
     TestJThread();
+    TestSemaphore();
+    TestLatch();
+    TestBarrier();
+    TestAtomicWait();
 #endif
 
     TestConditionVariable();

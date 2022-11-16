@@ -35,6 +35,7 @@ typedef free_rtos_std::gthr_freertos __gthread_t;
 extern "C"
 {
 
+#define __GTHREAD_COND_INIT_FUNCTION
 #define __GTHREADS 1
 
   // returns: 1 - thread system is active; 0 - thread system is not active
@@ -214,10 +215,50 @@ extern "C"
     return 0;
   }
 
-  //      not used - condition_variable has its own 'notify' function
-  //static inline int __gthread_cond_signal(__gthread_cond_t* cond) {
-  //  return -1;
-  //}
+  static inline int __gthread_cond_signal(__gthread_cond_t *cond)
+  {
+    cond->lock();
+    if (!cond->empty())
+    {
+      auto t = cond->front();
+      cond->pop();
+      xTaskNotifyGive(t);
+    }
+    cond->unlock();
+    return 0;
+  }
+
+  static inline int __gthread_cond_broadcast(__gthread_cond_t *cond)
+  {
+    cond->lock();
+    while (!cond->empty())
+    {
+      auto t = cond->front();
+      cond->pop();
+      xTaskNotifyGive(t);
+    }
+    cond->unlock();
+    return 0;
+  }
+
+  static inline int __gthread_cond_destroy(__gthread_cond_t *cond) {
+    // nothing to do
+    return 0;
+  }
+
+  static inline int __gthread_cond_wait(__gthread_cond_t *cond, __gthread_mutex_t *mutex)
+  {
+    // Note: 'mutex' is taken before entering this function
+
+    cond->lock();
+    cond->push(__gthread_t::native_task_handle());
+    cond->unlock();
+
+    __gthread_mutex_unlock(mutex);
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+    __gthread_mutex_lock(mutex); // lock and return
+    return 0;
+  }
 
   static inline int __gthread_cond_timedwait(
       __gthread_cond_t *cond, __gthread_mutex_t *mutex,

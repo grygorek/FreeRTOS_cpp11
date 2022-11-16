@@ -1,0 +1,68 @@
+name: RISC-V none GCC 11.3.0
+
+on: [push]
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+
+jobs:
+  Build-All-RISCV-none-GCC11:
+    # The CMake configure and build commands are platform agnostic and should work equally
+    # well on Windows or Mac.  You can convert this to a matrix build if you need
+    # cross-platform coverage.
+    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install RISC-V none GCC 11.3.0
+      shell: pwsh
+      run: | 
+       Invoke-WebRequest -Uri "https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases/download/v11.3.0-1/xpack-riscv-none-elf-gcc-11.3.0-1-win32-x64.zip" -OutFile "xpack-riscv-none-elf-gcc-11.3.0-1-win32-x64.zip" -Verbose
+       echo "-----Unpack gcc zip----"
+       Expand-Archive xpack-*
+       echo "Done"
+       echo ""
+       ls
+
+       $env:GCC_PATH = "${{github.workspace}}/xpack-riscv-none-elf-gcc-11.3.0-1-win32-x64/xpack-riscv-none-elf-gcc-11.3.0-1" 
+
+       $env:GCC_PATH+"/bin/" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+       $env:GCC_PATH+"/riscv-none-elf/include/" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+       $env:GCC_PATH+"/riscv-none-elf/include/c++/11.3.0/" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+       $env:GCC_PATH+"/riscv-none-elf/include/c++/11.3.0/riscv-none-elf" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+       $env:GCC_PATH+"/riscv-none-elf/include/c++/11.3.0/backward" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+       $env:GCC_PATH+"/lib/gcc/riscv-none-elf/11.3.0/include" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+       $env:GCC_PATH+"/lib/gcc/riscv-none-elf/11.3.0/include-fixed" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+       $env:GCC_PATH+"/riscv-none-elf/lib/rv32im/ilp32/" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+    #
+    #  RISC-V
+    #
+
+    - name: Check compiler
+      run: riscv-none-elf-gcc --version
+
+    - name: Create Build Environment RISC-V
+      # Some projects don't allow in-source building, so create a separate build directory
+      # We'll use this as our working directory for all subsequent commands
+      run: cmake -E make_directory ${{github.workspace}}/build_riscv
+
+    - name: Configure CMake
+      # Use a bash shell so we can use the same syntax for environment variable
+      # access regardless of the host operating system
+      shell: bash
+      working-directory: ${{github.workspace}}/build_riscv
+      # Note the current convention is to use the -S and -B options here to specify source 
+      # and build directories, but this is only available with CMake 3.13 and higher.  
+      # The CMake binaries on the Github Actions machines are (as of this writing) 3.12
+      run: |
+       cmake $GITHUB_WORKSPACE  -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -Driscv=1
+
+    - name: Build RISC-V
+      working-directory: ${{github.workspace}}/build_riscv
+      shell: bash
+      # Execute the build.  You can specify a specific target with "--target <NAME>"
+      run: cmake --build . --config $BUILD_TYPE -j
