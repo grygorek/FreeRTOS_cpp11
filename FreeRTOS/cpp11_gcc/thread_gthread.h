@@ -1,4 +1,5 @@
 /// Copyright 2021 Piotr Grygorczuk <grygorek@gmail.com>
+/// Copyright 2023 by NXP. All rights reserved.
 ///
 /// Permission is hereby granted, free of charge, to any person obtaining a copy
 /// of this software and associated documentation files (the "Software"), to deal
@@ -40,6 +41,61 @@ namespace std
 
 namespace free_rtos_std
 {
+  class stacksize_lock_section : critical_section
+  {
+    // It is possible to manually specify the task stack size when creating a
+    // std::thread instance as follows:
+    // ```
+    // std::thread t{[&] {
+    //     free_rtos_std::stacksize_lock_section lock{4096U}; // 16 kB
+    //     return std::thread{fn, args};
+    // }()};
+    // ```
+    // This way, we are sure that only this one thread will have the specified
+    // stack size, while keeping the convenient std::thread API.
+    //
+    // Please note that the following will result in a deadlock:
+    // ```
+    // std::thread t;
+    // {
+    //   free_rtos_std::stacksize_lock_section lock{4096U}; // 16 kB
+    //   t = std::thread{fn, args};
+    // }
+    // ```
+    // The reason is that the move assignment operator of std::thread calls the
+    // gthr_freertos::wait_for_start method, which waits for a different task.
+    // Since scheduling is disabled during the lifetime of
+    // stacksize_lock_section, that waiting will never return. Instead, if the
+    // std::thread object only needs to assigned, we can proceed as follows:
+    // ```
+    // t = [&] {
+    //   free_rtos_std::stacksize_lock_section lock{4096U}; // 16 kB
+    //   return std::thread{fn, args};
+    // }();
+    // ```
+
+  public:
+    explicit stacksize_lock_section(size_t stackWordCount) noexcept
+    {
+      _stackWordCount = stackWordCount;
+    }
+
+    ~stacksize_lock_section()
+    {
+      _stackWordCount = DEFAULT_STACK_WORDCOUNT;
+    }
+
+    static size_t stack_word_count() noexcept
+    {
+      return _stackWordCount;
+    }
+
+    // Default stack size is 512 words, so 2 kB
+    static constexpr size_t DEFAULT_STACK_WORDCOUNT{512U};
+
+  private:
+    static size_t _stackWordCount;
+  };
 
   class gthr_freertos
   {
@@ -122,7 +178,8 @@ namespace free_rtos_std
       {
         critical_section critical;
 
-        xTaskCreate(foo, "Task", 512, this, tskIDLE_PRIORITY + 1, &_taskHandle);
+        xTaskCreate(foo, "Task", stacksize_lock_section::stack_word_count(),
+                    this, tskIDLE_PRIORITY + 1, &_taskHandle);
         if (!_taskHandle)
           std::terminate();
 
