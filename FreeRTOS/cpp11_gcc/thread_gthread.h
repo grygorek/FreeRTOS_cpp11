@@ -44,7 +44,7 @@ namespace free_rtos_std
   class stacksize_lock_section : critical_section
   {
     // It is possible to manually specify the task stack size when creating a
-    // std::thread instance as follows:
+    // `std::thread` instance as follows:
     // ```
     // std::thread t{[&] {
     //     free_rtos_std::stacksize_lock_section lock{4096U}; // 16 kB
@@ -52,7 +52,7 @@ namespace free_rtos_std
     // }()};
     // ```
     // This way, we are sure that only this one thread will have the specified
-    // stack size, while keeping the convenient std::thread API.
+    // stack size, while keeping the convenient `std::thread` API.
     //
     // Please note that the following will result in a deadlock:
     // ```
@@ -63,16 +63,20 @@ namespace free_rtos_std
     // }
     // ```
     // The reason is that the move assignment operator of std::thread calls the
-    // gthr_freertos::wait_for_start method, which waits for a different task.
-    // Since scheduling is disabled during the lifetime of
-    // stacksize_lock_section, that waiting will never return. Instead, if the
-    // std::thread object only needs to assigned, we can proceed as follows:
+    // `gthr_freertos::wait_for_start` method, which waits for a different
+    // task. Since scheduling is disabled during the lifetime of
+    // `stacksize_lock_section`, that waiting will never return. Instead, if
+    // the `std::thread` object only needs to assigned, we can proceed as
+    // follows:
     // ```
     // t = [&] {
     //   free_rtos_std::stacksize_lock_section lock{4096U}; // 16 kB
     //   return std::thread{fn, args};
     // }();
     // ```
+    // In this case, the move assignment operator is called only after the
+    // `stacksize_lock_section` instance is destroyed, so the scheduler is
+    // running again.
 
   public:
     explicit stacksize_lock_section(configSTACK_DEPTH_TYPE stackWordCount) noexcept
