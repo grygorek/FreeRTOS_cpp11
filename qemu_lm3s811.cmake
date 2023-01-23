@@ -92,10 +92,10 @@ add_executable(${PROJECT_NAME}.elf
   qemu_lm3s811/hw_include/src/uart.c
   qemu_lm3s811/hw_include/src/osram96x16.c
 
-  qemu_lm3s811/freertos_Demo/Common/Minimal/integer.c
-  qemu_lm3s811/freertos_Demo/Common/Minimal/BlockQ.c
-  qemu_lm3s811/freertos_Demo/Common/Minimal/PollQ.c
-  qemu_lm3s811/freertos_Demo/Common/Minimal/semtest.c
+  qemu_lm3s811/freertos_demo/Common/Minimal/integer.c
+  qemu_lm3s811/freertos_demo/Common/Minimal/BlockQ.c
+  qemu_lm3s811/freertos_demo/Common/Minimal/PollQ.c
+  qemu_lm3s811/freertos_demo/Common/Minimal/semtest.c
 )
 
 find_library(driver libdriver.a PATHS ${CMAKE_SOURCE_DIR}/qemu_lm3s811/hw_include REQUIRED)

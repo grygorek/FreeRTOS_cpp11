@@ -1,4 +1,5 @@
 /// Copyright 2021 Piotr Grygorczuk <grygorek@gmail.com>
+/// Copyright 2023 by NXP. All rights reserved.
 ///
 /// Permission is hereby granted, free of charge, to any person obtaining a copy
 /// of this software and associated documentation files (the "Software"), to deal
@@ -28,6 +29,9 @@
 namespace free_rtos_std
 {
   extern Key *s_key;
+
+  configSTACK_DEPTH_TYPE stacksize_lock_section::_stackWordCount{
+      stacksize_lock_section::DEFAULT_STACK_WORDCOUNT};
 } // namespace free_rtos_std
 
 namespace std

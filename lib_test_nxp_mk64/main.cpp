@@ -62,6 +62,8 @@ int main(void)
     DestroyNoStart();
     StartAndMoveOperator();
     StartAndMoveConstructor();
+    StartWithStackSize();
+    AssignWithStackSize();
 
 #if __cplusplus > 201907L
     TestJThread();
