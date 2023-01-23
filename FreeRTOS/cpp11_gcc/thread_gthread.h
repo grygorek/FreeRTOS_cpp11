@@ -75,7 +75,7 @@ namespace free_rtos_std
     // ```
 
   public:
-    explicit stacksize_lock_section(size_t stackWordCount) noexcept
+    explicit stacksize_lock_section(configSTACK_DEPTH_TYPE stackWordCount) noexcept
     {
       _stackWordCount = stackWordCount;
     }
@@ -85,16 +85,16 @@ namespace free_rtos_std
       _stackWordCount = DEFAULT_STACK_WORDCOUNT;
     }
 
-    static size_t stack_word_count() noexcept
+    static configSTACK_DEPTH_TYPE stack_word_count() noexcept
     {
       return _stackWordCount;
     }
 
     // Default stack size is 512 words, so 2 kB
-    static constexpr size_t DEFAULT_STACK_WORDCOUNT{512U};
+    static constexpr configSTACK_DEPTH_TYPE DEFAULT_STACK_WORDCOUNT{512U};
 
   private:
-    static size_t _stackWordCount;
+    static configSTACK_DEPTH_TYPE _stackWordCount;
   };
 
   class gthr_freertos

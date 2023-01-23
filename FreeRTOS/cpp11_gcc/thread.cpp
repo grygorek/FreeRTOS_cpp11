@@ -30,7 +30,7 @@ namespace free_rtos_std
 {
   extern Key *s_key;
 
-  size_t stacksize_lock_section::_stackWordCount{
+  configSTACK_DEPTH_TYPE stacksize_lock_section::_stackWordCount{
       stacksize_lock_section::DEFAULT_STACK_WORDCOUNT};
 } // namespace free_rtos_std
 
