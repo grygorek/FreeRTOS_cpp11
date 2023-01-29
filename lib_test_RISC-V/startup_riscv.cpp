@@ -53,4 +53,10 @@ extern "C"
     // Start the real time scheduler.
     vTaskStartScheduler();
   }
+
+  void _exit(int)
+  {
+    while (1)
+      ;
+  }
 }

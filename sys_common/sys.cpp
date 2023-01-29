@@ -23,12 +23,6 @@
 
 extern "C"
 {
-  void _exit()
-  {
-    while (1)
-      ;
-  }
-
   struct stat;
   int _stat(const char *path, struct stat *buf)
   {
