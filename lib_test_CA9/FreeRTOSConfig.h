@@ -89,7 +89,7 @@ uint32_t SystemCoreClockFreq();
 #define configSUPPORT_STATIC_ALLOCATION			0
 #define configNUM_THREAD_LOCAL_STORAGE_POINTERS 5
 
-#define configMAIN_STACK_SIZE 256 // in words (bytes = x4)
+#define configMAIN_STACK_SIZE 384 // in words (bytes = x4)
 
 /* Co-routine definitions. */
 #define configUSE_CO_ROUTINES 					0

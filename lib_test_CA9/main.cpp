@@ -52,38 +52,40 @@ int main(void)
 
   SetSystemClockTime(time_point<system_clock>(1550178897s));
 
-  while (1)
-  {
-    std::this_thread::sleep_until(system_clock::now() + 200ms);
+  std::this_thread::sleep_until(system_clock::now() + 200ms);
 
-    print("Run...");
+  print("Run...");
 
-    TestMtx();
+  TestMtx();
 
-    DetachAfterThreadEnd();
-    DetachBeforeThreadEnd();
-    JoinAfterThreadEnd();
-    JoinBeforeThreadEnd();
-    DestroyBeforeThreadEnd();
-    DestroyNoStart();
-    StartAndMoveOperator();
-    StartAndMoveConstructor();
-    StartWithStackSize();
-    AssignWithStackSize();
+  DetachAfterThreadEnd();
+  DetachBeforeThreadEnd();
+  JoinAfterThreadEnd();
+  JoinBeforeThreadEnd();
+  DestroyBeforeThreadEnd();
+  DestroyNoStart();
+  StartAndMoveOperator();
+  StartAndMoveConstructor();
+  StartWithStackSize();
+  AssignWithStackSize();
 
 #if __cplusplus > 201907L
-    TestJThread();
-    TestSemaphore();
-    TestLatch();
-    TestBarrier();
-    TestAtomicWait();
+  TestJThread();
+
+  // Semaphore is not stable in gcc11 (??)
+  // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=104928
+
+  TestSemaphore();
+  TestLatch();
+  TestBarrier();
+  TestAtomicWait();
 #endif
 
-    TestConditionVariable();
+  TestConditionVariable();
+  TestCallOnce();
+  TestFuture();
 
-    TestCallOnce();
-    TestFuture();
+  print("OK\n");
 
-    print("OK\n");
-  }
+  return EXIT_SUCCESS;
 }

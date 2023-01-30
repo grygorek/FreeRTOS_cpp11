@@ -274,3 +274,10 @@ IntDefaultHandler(void)
   {
   }
 }
+
+
+extern "C" void _exit(int)
+{
+  while(1)
+    ;
+}

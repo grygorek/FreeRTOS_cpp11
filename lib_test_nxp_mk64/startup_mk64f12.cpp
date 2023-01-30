@@ -1084,6 +1084,12 @@ WEAK void ENET_Error_IRQHandler(void)
 
 //*****************************************************************************
 
+extern "C" void _exit(int)
+{
+  while(1)
+    ;
+}
+
 #if defined(DEBUG)
 #pragma GCC pop_options
 #endif // (DEBUG)

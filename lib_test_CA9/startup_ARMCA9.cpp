@@ -33,6 +33,8 @@
  * 3. Add bss init, data section copy and cpp init.
  */
 
+#include <stdlib.h>
+
 #include "FreeRTOS.h"
 #include "task.h"
 #include "ARMCA9.h"
@@ -114,7 +116,7 @@ void bss_init(unsigned int start, unsigned int len)
 int main();
 
 void free_rtos_main(void*) {
-  main();
+  exit(main());
 }
 
 /*----------------------------------------------------------------------------
@@ -207,5 +209,30 @@ extern "C" void Reset_Handler(void) {
   Default Handler for Exceptions / Interrupts
  *----------------------------------------------------------------------------*/
 void Default_Handler(void) {
-  while(1);
+  while (1);
+}
+
+extern "C" void _exit(int exit_code)
+{
+  // Exit implements SYS_EXIT_EXTENDED semihosting command.
+  // This will exit QEMU session when running program in QEMU.
+  // On arm32 this is the only way to return exit code.
+  // On arm64 SYS_EXIT is enough.
+  // ref. https://github.com/ARM-software/abi-aa/blob/main/semihosting/semihosting.rst
+
+  // store data sp[0] = ADP_Stopped_ApplicationExit, sp[1]=exit_code
+  // r1 = 0x20026;           // ADP_Stopped_ApplicationExit
+  asm("mov r1, #0x26");
+  asm("movt r1, #0x2");
+  asm("str r1, [sp,#0]"); // sp[0] = ADP_Stopped_ApplicationExit
+  asm("str r0, [sp,#4]"); // sp[1] = exit_code
+
+  // semihosting r1=address of the data, r0=SYS_EXIT_EXTENDED
+  asm("mov r1, sp");    // data is on the stack
+  asm("mov r0, #0x20"); // SYS_EXIT_EXTENDED
+
+  // This will halt CPU
+  asm("hlt #0xF000"); // syscall
+
+  (void)exit_code; // Silence compiler warning, but variable is used. It is register R0.
 }

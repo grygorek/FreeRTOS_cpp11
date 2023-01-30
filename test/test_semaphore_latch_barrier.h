@@ -68,7 +68,7 @@ inline void TestLatch()
 
 inline void TestBarrier()
 {
-  std::array<int, 3> test;
+  std::array<int, 3> test{};
   int cnt = 0;
 
   std::barrier sync{test.size(), [&]
