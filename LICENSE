@@ -25,7 +25,7 @@ described in libstdc++_gcc/license subdirectory.
 vendors, some are part of a build system and library test files, etc. 
 In case of doubts, each has a license text included at the top of the file.
 
-Copyright 2021 Piotr Grygorczuk <grygorek@gmail.com>
+Copyright 2018-2023 Piotr Grygorczuk <grygorek@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
