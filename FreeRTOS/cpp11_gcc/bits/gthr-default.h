@@ -32,6 +32,16 @@
 
 typedef free_rtos_std::gthr_freertos __gthread_t;
 
+namespace free_rtos_std
+{
+  struct Once
+  {
+    bool v = false;
+    SemaphoreHandle_t m = xSemaphoreCreateMutex();
+    ~Once() { vSemaphoreDelete(m); }
+  };
+}
+
 extern "C"
 {
 
@@ -42,12 +52,12 @@ extern "C"
   static int __gthread_active_p() { return 1; }
 
   typedef free_rtos_std::Key *__gthread_key_t;
-  typedef int __gthread_once_t;
+  typedef free_rtos_std::Once __gthread_once_t;
   typedef SemaphoreHandle_t __gthread_mutex_t;
   typedef SemaphoreHandle_t __gthread_recursive_mutex_t;
   typedef free_rtos_std::cv_task_list __gthread_cond_t;
 
-#define __GTHREAD_ONCE_INIT 0
+#define __GTHREAD_ONCE_INIT free_rtos_std::Once()
 
   static inline void __GTHREAD_RECURSIVE_MUTEX_INIT_FUNCTION(
       __gthread_recursive_mutex_t *mutex)
@@ -61,17 +71,15 @@ extern "C"
 
   static int __gthread_once(__gthread_once_t *once, void (*func)(void))
   {
-    static __gthread_mutex_t s_m = xSemaphoreCreateMutex();
-    if (!s_m)
-      return 12; //POSIX error: ENOMEM
+    if (!once->m)
+      return 12; // POSIX error: ENOMEM
 
-    __gthread_once_t flag{true};
-    xSemaphoreTakeRecursive(s_m, portMAX_DELAY);
-    std::swap(*once, flag);
-    xSemaphoreGiveRecursive(s_m);
-
+    bool flag{true};
+    xSemaphoreTake(once->m, portMAX_DELAY);
+    std::swap(once->v, flag);
     if (flag == false)
       func();
+    xSemaphoreGive(once->m);
 
     return 0;
   }
@@ -241,7 +249,8 @@ extern "C"
     return 0;
   }
 
-  static inline int __gthread_cond_destroy(__gthread_cond_t *cond) {
+  static inline int __gthread_cond_destroy(__gthread_cond_t *cond)
+  {
     // nothing to do
     return 0;
   }
