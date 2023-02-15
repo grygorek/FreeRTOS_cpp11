@@ -212,7 +212,7 @@ void Default_Handler(void) {
   while (1);
 }
 
-extern "C" void _exit(int exit_code)
+int sys_semihost(int reason, volatile void *arg)
 {
   // Exit implements SYS_EXIT_EXTENDED semihosting command.
   // This will exit QEMU session when running program in QEMU.
@@ -220,19 +220,21 @@ extern "C" void _exit(int exit_code)
   // On arm64 SYS_EXIT is enough.
   // ref. https://github.com/ARM-software/abi-aa/blob/main/semihosting/semihosting.rst
 
-  // store data sp[0] = ADP_Stopped_ApplicationExit, sp[1]=exit_code
-  // r1 = 0x20026;           // ADP_Stopped_ApplicationExit
-  asm("mov r1, #0x26");
-  asm("movt r1, #0x2");
-  asm("str r1, [sp,#0]"); // sp[0] = ADP_Stopped_ApplicationExit
-  asm("str r0, [sp,#4]"); // sp[1] = exit_code
+  volatile register int value asm("r0") = reason;
+  volatile register void *data asm("r1") = arg;
+  asm volatile (
+    "  SVC #0x123456  "
+    : "=r"(value)
+    : "0"(value), "r"(data)
+  );
 
-  // semihosting r1=address of the data, r0=SYS_EXIT_EXTENDED
-  asm("mov r1, sp");    // data is on the stack
-  asm("mov r0, #0x20"); // SYS_EXIT_EXTENDED
+  return value;
+}
 
-  // This will halt CPU
-  asm("hlt #0xF000"); // syscall
-
-  (void)exit_code; // Silence compiler warning, but variable is used. It is register R0.
+extern "C" void _exit(int exit_code)
+{
+  constexpr int SYS_EXIT_EXTENDED = 0x20u;
+  constexpr int ADP_Stopped_ApplicationExit = 0x200026u;
+  volatile int ret[2] = {ADP_Stopped_ApplicationExit, exit_code};
+  sys_semihost(SYS_EXIT_EXTENDED, ret);
 }
