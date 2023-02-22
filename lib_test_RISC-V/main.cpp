@@ -1,4 +1,4 @@
-/// Copyright 2022 Piotr Grygorczuk <grygorek@gmail.com>
+/// Copyright 2018-2023 Piotr Grygorczuk <grygorek@gmail.com>
 ///
 /// Permission is hereby granted, free of charge, to any person obtaining a copy
 /// of this software and associated documentation files (the "Software"), to deal
@@ -24,6 +24,8 @@
 #include <condition_variable>
 #include <future>
 #include <cassert>
+
+#include "test_helpers.h"
 
 #include "console.h"
 
@@ -54,35 +56,42 @@ int main(void)
 
   std::this_thread::sleep_until(system_clock::now() + 200ms);
 
-  print("Run...");
+  print("Run...\n");
+  for (int i = 0; i < 10; i++)
+  {
+    print("Iteration - ");
+    print(i);
+    print("\n");
 
-  TestMtx();
+    TEST_F(TestMtx);
 
-  DetachAfterThreadEnd();
-  DetachBeforeThreadEnd();
-  JoinAfterThreadEnd();
-  JoinBeforeThreadEnd();
-  DestroyBeforeThreadEnd();
-  DestroyNoStart();
-  StartAndMoveOperator();
-  StartAndMoveConstructor();
-  StartWithStackSize();
-  AssignWithStackSize();
+    TEST_F(DetachAfterThreadEnd);
+    TEST_F(DetachBeforeThreadEnd);
+    TEST_F(JoinAfterThreadEnd);
+    TEST_F(JoinBeforeThreadEnd);
+    TEST_F(DestroyBeforeThreadEnd);
+    TEST_F(DestroyNoStart);
+    TEST_F(StartAndMoveOperator);
+    TEST_F(StartAndMoveConstructor);
+    TEST_F(StartWithStackSize);
+    TEST_F(AssignWithStackSize);
 
 #if __cplusplus > 201907L
-  TestJThread();
-  TestSemaphore();
-  TestLatch();
-  TestBarrier();
-  TestAtomicWait();
+    TEST_F(TestJThread);
+
+    // Semaphore is not stable in gcc11 (??)
+    // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=104928
+
+    TEST_F(TestSemaphore);
+    TEST_F(TestLatch);
+    TEST_F(TestBarrier);
+    TEST_F(TestAtomicWait);
 #endif
 
-  TestConditionVariable();
-
-  TestCallOnce();
-  TestFuture();
-
+    TEST_F(TestConditionVariable);
+    TEST_F(TestCallOnce);
+    TEST_F(TestFuture);
+  }
   print("OK\n");
-
   return EXIT_SUCCESS;
 }
