@@ -81,6 +81,7 @@ int main(void)
 
     // Semaphore is not stable in gcc11 (??)
     // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=104928
+    // Often Hitting __cxxabiv1::throw_recursive_init_exception when running TesteSemaphore
 
     TEST_F(TestSemaphore);
     TEST_F(TestLatch);
