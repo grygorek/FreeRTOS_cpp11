@@ -22,11 +22,19 @@
 
 // UART data register
 volatile unsigned int *const UART0DR = (unsigned int *)0x10009000; // ???
+volatile unsigned int *const UART0FR = (unsigned int *)0x10009006; // ???
+
+static void wait_for_ready()
+{
+  while (*UART0FR & (1 << 7))
+    ;
+}
 
 void print(const char *s)
 {
   while (*s != '\0')
   { // missing: waiting for the data register to be empty
+    wait_for_ready();
     *UART0DR = (unsigned int)(*s);
     s++;
   }
@@ -38,6 +46,7 @@ void print(unsigned int num)
   for (int i = 8; i >= 0; i--)
   { // missing: waiting for the data register to be empty
     unsigned char c = (num >> (i * 4)) & 0xF;
+    wait_for_ready();
     if (c < sizeof(tab) - 1)
       *UART0DR = tab[c];
     else
