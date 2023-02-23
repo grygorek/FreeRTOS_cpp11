@@ -234,7 +234,7 @@ int sys_semihost(int reason, volatile void *arg)
 extern "C" void _exit(int exit_code)
 {
   constexpr int SYS_EXIT_EXTENDED = 0x20u;
-  constexpr int ADP_Stopped_ApplicationExit = 0x200026u;
+  constexpr int ADP_Stopped_ApplicationExit = 0x20026u;
   volatile int ret[2] = {ADP_Stopped_ApplicationExit, exit_code};
   sys_semihost(SYS_EXIT_EXTENDED, ret);
 }
