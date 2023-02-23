@@ -2,16 +2,8 @@ name: RISC-V none GCC 11.3.0
 
 on: [push]
 
-env:
-  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
-  BUILD_TYPE: Release
-
 jobs:
   Build-All-RISCV-none-GCC11:
-    # The CMake configure and build commands are platform agnostic and should work equally
-    # well on Windows or Mac.  You can convert this to a matrix build if you need
-    # cross-platform coverage.
-    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
     runs-on: windows-latest
 
     steps:
@@ -46,23 +38,44 @@ jobs:
       run: riscv-none-elf-gcc --version
 
     - name: Create Build Environment RISC-V
-      # Some projects don't allow in-source building, so create a separate build directory
-      # We'll use this as our working directory for all subsequent commands
       run: cmake -E make_directory ${{github.workspace}}/build_riscv
 
     - name: Configure CMake
-      # Use a bash shell so we can use the same syntax for environment variable
-      # access regardless of the host operating system
       shell: bash
       working-directory: ${{github.workspace}}/build_riscv
-      # Note the current convention is to use the -S and -B options here to specify source 
-      # and build directories, but this is only available with CMake 3.13 and higher.  
-      # The CMake binaries on the Github Actions machines are (as of this writing) 3.12
       run: |
-       cmake $GITHUB_WORKSPACE  -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -Driscv=1
+       cmake $GITHUB_WORKSPACE  -G "Unix Makefiles" -DDEBUG=1 -Driscv=1
 
     - name: Build RISC-V
       working-directory: ${{github.workspace}}/build_riscv
       shell: bash
-      # Execute the build.  You can specify a specific target with "--target <NAME>"
-      run: cmake --build . --config $BUILD_TYPE -j
+      run: cmake --build . -j
+
+    - name: Save binaries
+      uses: actions/upload-artifact@v3
+      with:
+        name: riscv-elf
+        retention-days: 1
+        path: |
+          build_riscv/test_riscv.elf
+
+  Run-QEMU:
+    runs-on: ubuntu-latest
+    needs: Build-All-RISCV-none-GCC11
+    timeout-minutes: 5
+    steps:
+    - name: Set up QEMU
+      run: |
+        sudo apt-get install qemu-system-riscv32
+        qemu-system-riscv32 --version
+
+    - name: Donwload riscv binaries
+      uses: actions/download-artifact@v3
+      with:
+        name: riscv-elf
+
+    - name: Run Test
+      working-directory: /home/runner/work/FreeRTOS_cpp11/FreeRTOS_cpp11/
+      run: |
+        ls -la /home/runner/work/FreeRTOS_cpp11/FreeRTOS_cpp11/
+        qemu-system-riscv32 -M virt -semihosting -nographic -bios none -kernel test_riscv.elf
