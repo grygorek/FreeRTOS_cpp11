@@ -94,8 +94,12 @@ namespace free_rtos_std
       return _stackWordCount;
     }
 
+#ifdef configDEFAULT_STD_THREAD_STACK_SIZE
+    static constexpr configSTACK_DEPTH_TYPE DEFAULT_STACK_WORDCOUNT{configDEFAULT_STD_THREAD_STACK_SIZE};
+#else
     // Default stack size is 512 words, so 2 kB
     static constexpr configSTACK_DEPTH_TYPE DEFAULT_STACK_WORDCOUNT{512U};
+#endif
 
   private:
     static configSTACK_DEPTH_TYPE _stackWordCount;

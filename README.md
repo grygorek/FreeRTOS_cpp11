@@ -827,10 +827,11 @@ created in a constructor but in create_thread function. Program will
 terminate if there is no resources. Alternatively, the function
 could return false instead. By default 512 words will be allocated
 for the stack. This would be 2kB on ARM. Standard C++ interface does not let
-define the stack size. So, this code has to be modified if application 
-requires more. Note, that the change will apply to all threads. The 2kB is 
-required when futures are used. Without futures, I had the system running 
-with 1kB only. 
+define the stack size. It is possible to configure the default stack size (in
+words) by setting the macro `configDEFAULT_STD_THREAD_STACK_SIZE` in your
+`FreeRTOSConfig.h` file. Note, that the change will apply to all threads. The
+2kB is required when futures are used. Without futures, I had the system
+running with 1kB only. 
 
 Critical section disables interrupts. As described earlier,
 the native thread function will delete thread's handle when finished.
@@ -849,7 +850,8 @@ bool gthr_freertos::create_thread(task_foo foo, void *arg)
   {
     critical_section critical;
 
-    xTaskCreate(foo, "Task", 512, this, tskIDLE_PRIORITY + 1, &_taskHandle);
+    xTaskCreate(foo, "Task", stacksize_lock_section::stack_word_count(),
+                    this, tskIDLE_PRIORITY + 1, &_taskHandle);
     if (!_taskHandle)
       std::terminate();
 
@@ -860,6 +862,47 @@ bool gthr_freertos::create_thread(task_foo foo, void *arg)
   return true;
 }
 ```
+
+The critical section feature is used to implement a way to manually specify the
+task stack size when creating a thread.
+
+```
+std::thread t{[&] {
+    free_rtos_std::stacksize_lock_section lock{4096U}; // 16 kB
+    return std::thread{fn, args};
+}()};
+```
+
+This way, we are sure that only this one thread will have the specified
+stack size, while keeping the convenient `std::thread` API.
+
+Please note that the following will result in a deadlock.
+
+```
+std::thread t;
+{
+  free_rtos_std::stacksize_lock_section lock{4096U}; // 16 kB
+  t = std::thread{fn, args};
+}
+```
+
+The reason is that the move assignment operator of std::thread calls the
+`gthr_freertos::wait_for_start` method, which waits for a different
+task. Since scheduling is disabled during the lifetime of
+`stacksize_lock_section`, that waiting will never return. Instead, if
+the `std::thread` object only needs to be assigned, we can
+proceed as follows.
+
+```
+t = [&] {
+  free_rtos_std::stacksize_lock_section lock{4096U}; // 16 kB
+  return std::thread{fn, args};
+}();
+```
+
+In this case, the move assignment operator is called only after the
+`stacksize_lock_section` instance is destroyed, so the scheduler is
+running again.
 
 ### Join
 
