@@ -850,7 +850,8 @@ bool gthr_freertos::create_thread(task_foo foo, void *arg)
   {
     critical_section critical;
 
-    xTaskCreate(foo, "Task", 512, this, tskIDLE_PRIORITY + 1, &_taskHandle);
+    xTaskCreate(foo, "Task", stacksize_lock_section::stack_word_count(),
+                    this, tskIDLE_PRIORITY + 1, &_taskHandle);
     if (!_taskHandle)
       std::terminate();
 
@@ -889,8 +890,8 @@ The reason is that the move assignment operator of std::thread calls the
 `gthr_freertos::wait_for_start` method, which waits for a different
 task. Since scheduling is disabled during the lifetime of
 `stacksize_lock_section`, that waiting will never return. Instead, if
-the `std::thread` object only needs to assigned, we can proceed as
-follows.
+the `std::thread` object only needs to be assigned, we can
+proceed as follows.
 
 ```
 t = [&] {
