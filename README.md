@@ -5,12 +5,15 @@ C++ FreeRTOS GCC
 
 Included library implements an interface enabling C++ multithreading 
 in FreeRTOS. That is:
-  * Creating threads - std::thread, 
+  * Creating threads - std::thread, std::jthread, 
   * Locking - std::mutex, std::condition_variable, etc.
   * Time - std::chrono, std::sleep_for, etc.
   * Futures - std::assync, std::promise, std::future, etc.
   * std::notify_all_at_thread_exit
   * C++20 semaphores, latches, barriers and atomic wait & notify
+
+Taking the advantage of custom integration with GCC, this library provides
+API to set thread custom attributes, like a stack size for example.
 
 I have not tested all the features. I know that `thread_local` does not work.
 It will compile but will not create thread unique storage.
@@ -29,7 +32,9 @@ This library is not intended to be accessed directly from your application.
 It is an interface between C++ and FreeRTOS. Your application should use the
 STL directly. STL will use the provided library under the hood. Saying that,
 none of the files should be included in your application's source files - 
-except one (`freertos_time.h` to set system time).
+except two 
+* `freertos_time.h` to set system time,
+* and `thread_with_attributes.h` to create threads with custom thread attributes (e.g. stack size)
 
 Attached are example cmake projects. One target is for NXP K64F Cortex M4
 microcontroller. It can be built from the command line:
@@ -120,23 +125,25 @@ The following definitions should also be placed in `FreeRTOSConfig.h` file:
 And then the following files need to be included in the project:
 
 ```
-condition_variable.h    --> Helper class to implement std::condition_variable
-critical_section.h      --> Helper class wrap FreeRTOS citical section
-                            (it is for the internal use only)
-freertos_time.cpp       --> Setting and reading system wall/clock time
-freertos_time.h         --> Declaration
-thread_gthread.h        --> Helper class to integrate FreeRTOS with std::thread
-thread.cpp              --> Definitions required by std::thread class
-gthr_key.cpp            --> Definition required by futures
-gthr_key.h              --> Declarations
-gthr_key_type.h         --> Helper class for local thread storage
-bits/gthr-default.h     --> FreeRTOS GCC Hook (thread and mutex, see below)
+condition_variable.h         --> Helper class to implement std::condition_variable
+critical_section.h           --> Helper class wrap FreeRTOS citical section
+                                 (it is for the internal use only)
+freertos_time.cpp            --> Setting and reading system wall/clock time
+freertos_time.h              --> Declaration
+freertos_thread_attributes.h --> Thread 'attributes' definition
+thread_with_attributes.h     --> Helper API to create std::thread and std::jthread with custom attributes
+thread_gthread.h             --> Helper class to integrate FreeRTOS with std::thread
+thread.cpp                   --> Definitions required by std::thread class
+gthr_key.cpp                 --> Definition required by futures
+gthr_key.h                   --> Declarations
+gthr_key_type.h              --> Helper class for local thread storage
+bits/gthr-default.h          --> FreeRTOS GCC Hook (thread and mutex, see below)
 
-future.cc               --> Taken as is from GCC code
-mutex.cc                --> Taken as is from GCC code
-condition_variable.cc   --> Taken as is from GCC code
-libatomic.c             --> Since GCC11 atomic is not included in GCC build
-                            for certain platforms. Need to provide it.
+future.cc                    --> Taken as is from GCC code
+mutex.cc                     --> Taken as is from GCC code
+condition_variable.cc        --> Taken as is from GCC code
+libatomic.c                  --> Since GCC11 atomic is not included in GCC build
+                                 for certain platforms. Need to provide it.
 ```
 
 Simple example application can be like that:
@@ -831,7 +838,10 @@ define the stack size. It is possible to configure the default stack size (in
 words) by setting the macro `configDEFAULT_STD_THREAD_STACK_SIZE` in your
 `FreeRTOSConfig.h` file. Note, that the change will apply to all threads. The
 2kB is required when futures are used. Without futures, I had the system
-running with 1kB only. 
+running with 1kB only.
+
+This library allows for setting a custom attributes (including a stack size)
+for each thread.
 
 Critical section disables interrupts. As described earlier,
 the native thread function will delete thread's handle when finished.
@@ -850,8 +860,8 @@ bool gthr_freertos::create_thread(task_foo foo, void *arg)
   {
     critical_section critical;
 
-    xTaskCreate(foo, "Task", stacksize_lock_section::stack_word_count(),
-                    this, tskIDLE_PRIORITY + 1, &_taskHandle);
+    auto &attr = internal::attributes_lock::_attrib;
+    xTaskCreate(foo, attr.taskName, attr.stackWordCount, this, attr.priority, &_taskHandle);
     if (!_taskHandle)
       std::terminate();
 
@@ -863,46 +873,50 @@ bool gthr_freertos::create_thread(task_foo foo, void *arg)
 }
 ```
 
-The critical section feature is used to implement a way to manually specify the
-task stack size when creating a thread.
+### Thread Attributes<sup>1</sup>
+
+It is possible to create std::thread and std::jthread instances with custom attributes.
+The `thread_with_attributes.h` file provides API to create those threads. There are two
+template functions, std_jthread to create std::jthread and std_thread to create std::thread:
 
 ```
-std::thread t{[&] {
-    free_rtos_std::stacksize_lock_section lock{4096U}; // 16 kB
-    return std::thread{fn, args};
-}()};
-```
-
-This way, we are sure that only this one thread will have the specified
-stack size, while keeping the convenient `std::thread` API.
-
-Please note that the following will result in a deadlock.
-
-```
-std::thread t;
+namespace free_rtos_std
 {
-  free_rtos_std::stacksize_lock_section lock{4096U}; // 16 kB
-  t = std::thread{fn, args};
+
+  template <typename... Args>
+  std::thread std_thread(const free_rtos_std::attributes &attr, Args &&...args)
+  {
+    free_rtos_std::internal::attributes_lock lock{attr};
+    return std::thread(std::forward<Args>(args)...);
+  }
+
+  template <typename... Args>
+  std::jthread std_jthread(const free_rtos_std::attributes &attr, Args &&...args)
+  {
+    free_rtos_std::internal::attributes_lock lock{attr};
+    return std::jthread(std::forward<Args>(args)...);
+  }
+
 }
 ```
 
-The reason is that the move assignment operator of std::thread calls the
-`gthr_freertos::wait_for_start` method, which waits for a different
-task. Since scheduling is disabled during the lifetime of
-`stacksize_lock_section`, that waiting will never return. Instead, if
-the `std::thread` object only needs to be assigned, we can
-proceed as follows.
+The `free_rtos_std::attributes` structure contains FreeRTOS task attributes. That is
+* task name
+* task stack size
+* task priority
 
-```
-t = [&] {
-  free_rtos_std::stacksize_lock_section lock{4096U}; // 16 kB
-  return std::thread{fn, args};
-}();
-```
+The way how it works is that there is a single global 'attributes' instance initialized
+with default values. When a std::thread is created using C++ standard API, those default
+attribute values are used. When a thread with custom attributes is required, the std_thread
+function will create an instance of attributes_lock, which will swap the default values
+with the provided custom ones.
 
-In this case, the move assignment operator is called only after the
-`stacksize_lock_section` instance is destroyed, so the scheduler is
-running again.
+The `attributes_lock` derives from `critial_section`. In that way the access to global attributes
+is thread safe. When gthr_freertos::create_thread is executed, it creates a critical section.
+In that time updating attributes is disabled (scheduler is disabled and context switch 
+will not happen). On the other hand, when the attributes_lock is created, it will prevent
+creating any other thread. Only this thread will use the custom attributes. Default values
+are restored when the attributes_lock is destroyed.
 
 ### Join
 
@@ -1362,3 +1376,7 @@ tried it).
 
 Files in this directory and subdirectories are covered with different licenses.
 Please have a look at LICENSE file in root directory for details.
+
+---
+[1] - Credit to Jakub Sosnovec for providing an initial solution to set custom
+      stack size and inspiring me to extend the library with custom attributes.
