@@ -26,6 +26,7 @@
 #include "task.h"
 #include "event_groups.h"
 #include "critical_section.h"
+#include "freertos_thread_attributes.h"
 
 #include <utility>   // std::forward
 #include <exception> // std::terminate
@@ -41,69 +42,60 @@ namespace std
 
 namespace free_rtos_std
 {
-  class stacksize_lock_section : critical_section
+  namespace internal
   {
-    // It is possible to manually specify the task stack size when creating a
-    // `std::thread` instance as follows:
-    // ```
-    // std::thread t{[&] {
-    //     free_rtos_std::stacksize_lock_section lock{4096U}; // 16 kB
-    //     return std::thread{fn, args};
-    // }()};
-    // ```
-    // This way, we are sure that only this one thread will have the specified
-    // stack size, while keeping the convenient `std::thread` API.
-    //
-    // Please note that the following will result in a deadlock:
-    // ```
-    // std::thread t;
-    // {
-    //   free_rtos_std::stacksize_lock_section lock{4096U}; // 16 kB
-    //   t = std::thread{fn, args};
-    // }
-    // ```
-    // The reason is that the move assignment operator of std::thread calls the
-    // `gthr_freertos::wait_for_start` method, which waits for a different
-    // task. Since scheduling is disabled during the lifetime of
-    // `stacksize_lock_section`, that waiting will never return. Instead, if
-    // the `std::thread` object only needs to assigned, we can proceed as
-    // follows:
-    // ```
-    // t = [&] {
-    //   free_rtos_std::stacksize_lock_section lock{4096U}; // 16 kB
-    //   return std::thread{fn, args};
-    // }();
-    // ```
-    // In this case, the move assignment operator is called only after the
-    // `stacksize_lock_section` instance is destroyed, so the scheduler is
-    // running again.
-
-  public:
-    explicit stacksize_lock_section(configSTACK_DEPTH_TYPE stackWordCount) noexcept
+    // Derive from the cticical_section. As long as an instance of attributes_lock exists
+    // it is safe to create a thread with custom attributes.
+    struct attributes_lock : critical_section
     {
-      _stackWordCount = stackWordCount;
-    }
+      // Note - attributes_lock should not be used by the end user. Helper API is
+      // provided in 'thread_with_attributes.h'. That header should be included by the
+      // end user when using custom attributes is required.
+      //
+      // It is possible to manually specify the task attributes when creating a
+      // `std::thread` instance as follows:
+      // ```
+      // std::thread t{[&] {
+      //     free_rtos_std::internal::attributes_lock lock{{.stackWordCount = 4096U}}; // 16 kB
+      //     return std::thread{fn, args};
+      // }()};
+      // ```
+      // This way, we are sure that only this one thread will have the specified
+      // attributes, while keeping the convenient `std::thread` API.
+      //
+      // Please note that the following will result in a deadlock:
+      // ```
+      // std::thread t;
+      // {
+      //   free_rtos_std::internal::attributes_lock lock{{.stackWordCount = 4096U}}; // 16 kB
+      //   t = std::thread{fn, args};
+      // }
+      // ```
+      // The reason is that the move assignment operator of std::thread calls the
+      // `gthr_freertos::wait_for_start` method, which waits for a different
+      // task. Since scheduling is disabled during the lifetime of
+      // `attributes_lock`, that waiting will never return. Instead, if
+      // the `std::thread` object only needs to be assigned, we can proceed as
+      // follows:
+      // ```
+      // t = [&] {
+      //   free_rtos_std::internal::attributes_lock lock{{.stackWordCount = 4096U}}; // 16 kB
+      //   return std::thread{fn, args};
+      // }();
+      // ```
+      // In this case, the move assignment operator is called only after the
+      // `attributes_lock` instance is destroyed, so the scheduler is
+      // running again, but the thread has already been created.
+      //
+      attributes_lock(const attributes &attrib) { _attrib = &attrib; }
+      ~attributes_lock() { _attrib = &_default; }
 
-    ~stacksize_lock_section()
-    {
-      _stackWordCount = DEFAULT_STACK_WORDCOUNT;
-    }
+      static const attributes *_attrib;
 
-    static configSTACK_DEPTH_TYPE stack_word_count() noexcept
-    {
-      return _stackWordCount;
-    }
-
-#ifdef configDEFAULT_STD_THREAD_STACK_SIZE
-    static constexpr configSTACK_DEPTH_TYPE DEFAULT_STACK_WORDCOUNT{configDEFAULT_STD_THREAD_STACK_SIZE};
-#else
-    // Default stack size is 512 words, so 2 kB
-    static constexpr configSTACK_DEPTH_TYPE DEFAULT_STACK_WORDCOUNT{512U};
-#endif
-
-  private:
-    static configSTACK_DEPTH_TYPE _stackWordCount;
-  };
+    private:
+      static constexpr attributes _default{};
+    };
+  }
 
   class gthr_freertos
   {
@@ -186,8 +178,8 @@ namespace free_rtos_std
       {
         critical_section critical;
 
-        xTaskCreate(foo, "Task", stacksize_lock_section::stack_word_count(),
-                    this, tskIDLE_PRIORITY + 1, &_taskHandle);
+        const auto &attr = *internal::attributes_lock::_attrib;
+        xTaskCreate(foo, attr.taskName, attr.stackWordCount, this, attr.priority, &_taskHandle);
         if (!_taskHandle)
           std::terminate();
 
