@@ -27,6 +27,8 @@
 #include <stop_token>
 #include <numeric>
 
+#include "thread_with_attributes.h"
+
 inline void DetachBeforeThreadEnd()
 {
   using namespace std::chrono_literals;
@@ -121,11 +123,10 @@ inline void StartWithStackSize()
     std::this_thread::sleep_for(50ms);
   };
 
-  std::thread t{ [&]{
-    // Stack would overflow without this
-    free_rtos_std::stacksize_lock_section lock{1024U};
-    return std::thread{fn};
-  }()};
+  using namespace free_rtos_std;
+  // Create a thread with a custom stack size.
+  // Stack would overflow without this
+  std::thread t = std_thread(attr_stack_size(1024U), fn);
   t.join();
 }
 
@@ -140,12 +141,11 @@ inline void AssignWithStackSize()
     std::this_thread::sleep_for(50ms);
   };
 
+  using namespace free_rtos_std;
   std::thread t;
-  t = [&]{
-    // Stack would overflow without this
-    free_rtos_std::stacksize_lock_section lock{1024U};
-    return std::thread{fn};
-  }();
+  // Assign a thread with a custom stack size.
+  // Stack would overflow without this
+  t = std_thread(attr_stack_size(1024U),fn);
   t.join();
 }
 

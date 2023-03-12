@@ -25,13 +25,13 @@
 #include "FreeRTOS.h"
 
 #include "gthr_key_type.h"
+#include "freertos_thread_attributes.h"
 
 namespace free_rtos_std
 {
   extern Key *s_key;
 
-  configSTACK_DEPTH_TYPE stacksize_lock_section::_stackWordCount{
-      stacksize_lock_section::DEFAULT_STACK_WORDCOUNT};
+  const attributes *internal::attributes_lock::_attrib{&internal::attributes_lock::_default};
 } // namespace free_rtos_std
 
 namespace std
@@ -39,7 +39,7 @@ namespace std
 
   static void __execute_native_thread_routine(void *__p)
   {
-    __gthread_t local{*static_cast<__gthread_t *>(__p)}; //copy
+    __gthread_t local{*static_cast<__gthread_t *>(__p)}; // copy
 
     { // we own the arg now; it must be deleted after run() returns
       thread::_State_ptr __t{static_cast<thread::_State *>(local.arg())};
