@@ -22,6 +22,7 @@
 #ifndef THREAD_TEST_H
 #define THREAD_TEST_H
 
+#include <array>
 #include <thread>
 #include <chrono>
 #include <stop_token>
