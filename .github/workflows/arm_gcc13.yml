@@ -1,0 +1,99 @@
+name: ARM none GCC 13.2
+
+on: [push]
+
+jobs:
+  Build-All-ARM-none-GCC13:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install ARM none GCC 13.2
+      shell: bash
+      run: | 
+       wget https://developer.arm.com/-/media/Files/downloads/gnu/13.2.rel1/binrel/arm-gnu-toolchain-13.2.rel1-x86_64-arm-none-eabi.tar.xz
+       echo "-----Unpack gcc tarball----"
+       tar -xf arm-gnu*
+       echo "Done"
+       echo ""
+       ls -la
+       
+       echo "${{github.workspace}}/arm-gnu-toolchain-13.2.rel1-x86_64-arm-none-eabi/bin" >> $GITHUB_PATH
+       echo "${{github.workspace}}/arm-gnu-toolchain-13.2.rel1-x86_64-arm-none-eabi/arm-none-eabi/lib" >> $GITHUB_PATH
+       echo "${{github.workspace}}/arm-gnu-toolchain-13.2.rel1-x86_64-arm-none-eabi/arm-none-eabi/include" >> $GITHUB_PATH
+       echo "${{github.workspace}}/arm-gnu-toolchain-13.2.rel1-x86_64-arm-none-eabi/arm-none-eabi/include/c++/13.2.1" >> $GITHUB_PATH
+       echo "${{github.workspace}}/arm-gnu-toolchain-13.2.rel1-x86_64-arm-none-eabi/arm-none-eabi/include/c++/13.2.1/arm-none-eabi" >> $GITHUB_PATH
+       echo "${{github.workspace}}/arm-gnu-toolchain-13.2.rel1-x86_64-arm-none-eabi/arm-none-eabi/include/c++/13.2.1/backward" >> $GITHUB_PATH
+       echo "${{github.workspace}}/arm-gnu-toolchain-13.2.rel1-x86_64-arm-none-eabi/lib/gcc/arm-none-eabi/13.2.1/include" >> $GITHUB_PATH
+       echo "${{github.workspace}}/arm-gnu-toolchain-13.2.rel1-x86_64-arm-none-eabi/lib/gcc/arm-none-eabi/13.2.1/include-fixed"       >> $GITHUB_PATH
+       echo "$PATH"
+
+    #
+    #  Cortex A9
+    #
+
+    - name: Create Build Environment ARM CA9
+      run: cmake -E make_directory ${{github.workspace}}/build_ca9
+
+    - name: Configure CMake
+      shell: bash
+      working-directory: ${{github.workspace}}/build_ca9
+      run: |
+       arm-none-eabi-gcc --version
+       cmake $GITHUB_WORKSPACE -Darmca9=1 -DDEBUG=1
+
+    - name: Build ARM CA9
+      working-directory: ${{github.workspace}}/build_ca9
+      shell: bash
+      run: cmake --build . -j
+
+    - name: Save binaries
+      uses: actions/upload-artifact@v3
+      with:
+        name: arm-ca9-elf
+        retention-days: 1
+        path: |
+          build_ca9/test_ca9.elf
+    
+    #
+    #  Cortex M4
+    #
+
+    - name: Create Build Environment ARM CM4
+      working-directory: ${{github.workspace}}
+      run: cmake -E make_directory ${{github.workspace}}/build_cm4
+
+    - name: Configure CMake
+      shell: bash
+      working-directory: ${{github.workspace}}/build_cm4
+      run: |
+       arm-none-eabi-gcc --version
+       cmake $GITHUB_WORKSPACE -Dk64frdmevk=1 -DDEBUG=1
+
+    - name: Build ARM CM4
+      working-directory: ${{github.workspace}}/build_cm4
+      shell: bash
+      run: cmake --build . -j
+
+  Run-QEMU:
+    runs-on: ubuntu-latest
+    needs: Build-All-ARM-none-GCC13
+    timeout-minutes: 5
+    steps:
+      - name: Set up QEMU
+        run: |
+          sudo apt-get install qemu-system-arm
+          qemu-system-arm --version
+
+      - name: Donwload arm binaries
+        uses: actions/download-artifact@v3
+        with:
+          name: arm-ca9-elf
+
+      - name: Run Test
+        working-directory: /home/runner/work/FreeRTOS_cpp11/FreeRTOS_cpp11/
+        run: |
+          ls -la /home/runner/work/FreeRTOS_cpp11/FreeRTOS_cpp11/
+          qemu-system-arm -M vexpress-a9 -m 128M -nographic -semihosting -kernel  test_ca9.elf
+        
