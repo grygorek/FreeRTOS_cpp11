@@ -53,7 +53,7 @@ SET(COMPILE_COMMON_FLAGS "${CONFIG_DEFS} ${COMPILE_PART_FLAGS} -Wall -Wextra -Wp
 
 # When enabling exceptions, change the linker script to link libstdc++.a instead of libstdc++_nano.a
 SET(CMAKE_C_FLAGS   "${COMPILE_COMMON_FLAGS} -std=c17  -nostdlib  -fno-builtin " CACHE INTERNAL "" FORCE)
-SET(CMAKE_CXX_FLAGS "${COMPILE_COMMON_FLAGS} -std=c++2a -nostdlib -fno-builtin -fno-exceptions -fno-rtti -fno-unwind-tables" CACHE INTERNAL "" FORCE)
+SET(CMAKE_CXX_FLAGS "${COMPILE_COMMON_FLAGS} -fno-threadsafe-statics -std=c++2a -nostdlib -fno-builtin -fno-exceptions -fno-rtti -fno-unwind-tables" CACHE INTERNAL "" FORCE)
 SET(CMAKE_ASM_FLAGS "-x assembler-with-cpp ${COMPILE_PART_FLAGS}"  CACHE INTERNAL "" FORCE)
 
 include_directories( 
