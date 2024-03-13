@@ -19,6 +19,7 @@
 /// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 /// THE SOFTWARE.
 
+#define _GLIBCXX_THREAD_IMPL 1
 #include <thread>
 #include <system_error>
 #include <cerrno>

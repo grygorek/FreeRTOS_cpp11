@@ -51,8 +51,8 @@ SET(COMPILE_COMMON_FLAGS "${CONFIG_DEFS} ${COMPILE_PART_FLAGS} -Wall -Wextra -Wp
                           -fmessage-length=0 -ffunction-sections -fdata-sections -Xlinker -Map=out.map")
 
 # When enabling exceptions, change the linker script to link libstdc++.a instead of libstdc++_nano.a
-SET(CMAKE_C_FLAGS   "${COMPILE_COMMON_FLAGS} -std=c17 -nostdlib -ffreestanding -fno-builtin " CACHE INTERNAL "" FORCE)
-SET(CMAKE_CXX_FLAGS "${COMPILE_COMMON_FLAGS} -std=c++2a -nostdlib -ffreestanding -fno-builtin -fno-exceptions -fno-rtti -fno-unwind-tables" CACHE INTERNAL "" FORCE)
+SET(CMAKE_C_FLAGS   "${COMPILE_COMMON_FLAGS} -std=c17 -nostdlib -fno-builtin " CACHE INTERNAL "" FORCE)
+SET(CMAKE_CXX_FLAGS "${COMPILE_COMMON_FLAGS} -std=c++2a -nostdlib -fno-builtin -fno-exceptions -fno-rtti -fno-unwind-tables" CACHE INTERNAL "" FORCE)
 SET(CMAKE_ASM_FLAGS "-x assembler-with-cpp ${COMPILE_PART_FLAGS}"  CACHE INTERNAL "" FORCE)
 
 include_directories( 
@@ -69,8 +69,10 @@ include_directories(
 # Select the right directory for the compiler version
 if(CMAKE_CXX_COMPILER_VERSION LESS 11)
   SET(GCC_VER_DIR "v10")
-else(CMAKE_CXX_COMPILER_VERSION LESS 11)
+elseif(CMAKE_CXX_COMPILER_VERSION LESS 12)
   SET(GCC_VER_DIR "v11")
+else()
+  SET(GCC_VER_DIR "v13")
 endif(CMAKE_CXX_COMPILER_VERSION LESS 11)
 
 add_subdirectory(FreeRTOS)
