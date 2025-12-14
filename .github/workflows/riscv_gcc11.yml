@@ -66,6 +66,7 @@ jobs:
     steps:
     - name: Set up QEMU
       run: |
+        sudo apt-get update
         sudo apt-get install qemu-system-riscv32
         qemu-system-riscv32 --version
 
