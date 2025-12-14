@@ -83,6 +83,7 @@ jobs:
     steps:
       - name: Set up QEMU
         run: |
+          sudo apt-get update
           sudo apt-get install qemu-system-arm
           qemu-system-arm --version
 
